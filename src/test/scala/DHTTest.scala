@@ -1,10 +1,16 @@
 import java.net.InetAddress
 import java.security.MessageDigest
 
+import org.scalatest.BeforeAndAfter
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-class DHTTest extends AnyFlatSpec with Matchers{
+class DHTTest extends AnyFlatSpec with Matchers with BeforeAndAfter {
+  // Run before each test
+  before {
+    DHT.resetRing
+  }
+
   "abc" should "result in correct hash " in {
     val res = DHT.getHash("abc")
     val hash = MessageDigest.getInstance("MD5").digest("abc".getBytes)
@@ -39,5 +45,22 @@ class DHTTest extends AnyFlatSpec with Matchers{
 
     val list = DHT.getTopNPreferenceNodes(150, 3)
     list should be (List(node3, node4, node5))
+  }
+
+  "preference list" should "return top N nodes circularly" in {
+    val node1 = RingNode(BigInt(1), InetAddress.getLocalHost)
+    val node2 = RingNode(BigInt(100), InetAddress.getLocalHost)
+    val node3 = RingNode(BigInt(200), InetAddress.getLocalHost)
+    val node4 = RingNode(BigInt(300), InetAddress.getLocalHost)
+    val node5 = RingNode(BigInt(400), InetAddress.getLocalHost)
+
+    DHT.addNode(node2)
+    DHT.addNode(node4)
+    DHT.addNode(node5)
+    DHT.addNode(node3)
+    DHT.addNode(node1)
+
+    val list = DHT.getTopNPreferenceNodes(250, 4)
+    list should be (List(node4, node5, node1, node2))
   }
 }
