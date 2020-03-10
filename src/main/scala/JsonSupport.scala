@@ -1,29 +1,53 @@
+import akka.cluster.VectorClock
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
-import spray.json.DefaultJsonProtocol
-import spray.json.DeserializationException
-import spray.json.JsString
-import spray.json.JsValue
-import spray.json.RootJsonFormat
+
+import scala.collection.immutable.TreeMap
 
 trait JsonSupport extends SprayJsonSupport {
   // import the default encoders for primitive types (Int, String, Lists etc)
+
+  import spray.json._
   import DefaultJsonProtocol._
   import ValueRepository._
 
   implicit object StatusFormat extends RootJsonFormat[Status] {
     def write(status: Status): JsValue = status match {
-      case Failed     => JsString("Failed")
+      case Failed => JsString("Failed")
       case Successful => JsString("Successful")
     }
 
     def read(json: JsValue): Status = json match {
-      case JsString("Failed")     => Failed
+      case JsString("Failed") => Failed
       case JsString("Successful") => Successful
-      case _                      => throw new DeserializationException("Status unexpected")
+      case _ => throw DeserializationException("Status unexpected")
     }
   }
 
-  implicit val valueFormat: RootJsonFormat[Value] = jsonFormat2(Value)
+  implicit object AnyJsonFormat extends JsonFormat[Any] {
+    def write(x: Any): JsValue with Serializable = x match {
+      case n: Long => JsNumber(n)
+      case s: String => JsString(s)
+      case b: Boolean if b => JsTrue
+      case b: Boolean if !b => JsFalse
+    }
+    def read(value: JsValue): Any = value match {
+      case JsNumber(n) => n.longValue
+      case JsString(s) => s
+      case JsTrue => true
+      case JsFalse => false
+    }
+  }
 
+  implicit def treeFormat[A: JsonFormat : Ordering, B: JsonFormat]: RootJsonFormat[TreeMap[A, B]] = new RootJsonFormat[TreeMap[A, B]] {
+    override def write(obj: TreeMap[A, B]): JsValue = obj.iterator.map(a => Map("key"-> a._1, "value" -> a._2)).toList.toJson
+    override def read(json: JsValue): TreeMap[A, B] = TreeMap.from(json.convertTo[List[Map[String, Any]]].map(a => (a("key").asInstanceOf[A], a("value").asInstanceOf[B])))
+  }
+
+  implicit object ClockFormat extends RootJsonFormat[VectorClock] {
+    override def write(obj: VectorClock): JsValue = obj.versions.toJson;
+    override def read(json: JsValue): VectorClock = new VectorClock(json.convertTo[TreeMap[String, Long]])
+  }
+
+  implicit val valueFormat: RootJsonFormat[Value] = jsonFormat3(Value)
   implicit val valuesFormat: RootJsonFormat[Values] = jsonFormat1(Values)
 }
