@@ -1,11 +1,11 @@
-import akka.actor.typed.{ActorRef, ActorSystem, Scheduler}
-import akka.util.Timeout
-import akka.http.scaladsl.server.Directives._
+import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.http.scaladsl.model.StatusCodes
+import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
+import akka.util.Timeout
 
-import scala.concurrent.duration._
 import scala.concurrent.Future
+import scala.concurrent.duration._
 
 class DynamoRoutes(buildValueRepository: ActorRef[ValueRepository.Command])(implicit system: ActorSystem[_]) extends JsonSupport {
 
@@ -40,9 +40,9 @@ class DynamoRoutes(buildValueRepository: ActorRef[ValueRepository.Command])(impl
             }
           )
         },
-        (get & path(LongNumber)) { id =>
+        (get & path(Remaining)) { id =>
           val maybeValue: Future[Option[ValueRepository.Value]] =
-            buildValueRepository.ask(ValueRepository.GetValueById(id, _))
+            buildValueRepository.ask(ValueRepository.GetValueByKey(id, _))
           rejectEmptyResponse {
             complete(maybeValue)
           }

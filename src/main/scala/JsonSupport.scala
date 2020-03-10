@@ -23,7 +23,7 @@ trait JsonSupport extends SprayJsonSupport {
     }
   }
 
-  implicit val valueFormat = jsonFormat4(Value)
+  implicit val valueFormat: RootJsonFormat[Value] = jsonFormat2(Value)
 
-  implicit val valuesFormat = jsonFormat1(Values)
+  implicit val valuesFormat: RootJsonFormat[Values] = jsonFormat1(Values)
 }
