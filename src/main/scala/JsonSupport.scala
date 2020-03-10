@@ -39,8 +39,8 @@ trait JsonSupport extends SprayJsonSupport {
   }
 
   implicit def treeFormat[A: JsonFormat : Ordering, B: JsonFormat]: RootJsonFormat[TreeMap[A, B]] = new RootJsonFormat[TreeMap[A, B]] {
-    override def write(obj: TreeMap[A, B]): JsValue = obj.iterator.map(a => Map("key"-> a._1, "value" -> a._2)).toList.toJson
-    override def read(json: JsValue): TreeMap[A, B] = TreeMap.from(json.convertTo[List[Map[String, Any]]].map(a => (a("key").asInstanceOf[A], a("value").asInstanceOf[B])))
+    override def write(obj: TreeMap[A, B]): JsValue = obj.iterator.map(a => Map(a._1 -> a._2)).toList.toJson
+    override def read(json: JsValue): TreeMap[A, B] = TreeMap.from(json.convertTo[List[Map[Any, Any]]].map(a => (a.keys.head.asInstanceOf[A], a.values.head.asInstanceOf[B])))
   }
 
   implicit object ClockFormat extends RootJsonFormat[VectorClock] {
