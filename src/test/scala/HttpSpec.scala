@@ -8,12 +8,11 @@ import akka.cluster.VectorClock
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
-import org.scalamock.scalatest.MockFactory
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
-class HttpSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with MockFactory with ScalatestRouteTest with JsonSupport {
+class HttpSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with ScalatestRouteTest with JsonSupport {
 
   lazy val testKit: ActorTestKit = ActorTestKit()
 
