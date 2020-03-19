@@ -16,6 +16,10 @@ object DHT {
     true
   }
 
+  def deleteNode(ringnode: RingNode): RingNode = {
+    ring.remove(ringnode.position)
+  }
+
   // Clear the ring
   def resetRing: Boolean = {
     ring.clear()
