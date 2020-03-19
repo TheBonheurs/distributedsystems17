@@ -25,7 +25,7 @@ class DynamoRoutes(buildValueRepository: ActorRef[ValueRepository.Command])(impl
                 val operationPerformed: Future[ValueRepository.Response] =
                   buildValueRepository.ask(ValueRepository.AddValue(job, _))
                 onSuccess(operationPerformed) {
-                  case ValueRepository.OK         => complete("Value added")
+                  case ValueRepository.OK => complete("Value added")
                   case ValueRepository.KO(reason) => complete(StatusCodes.InternalServerError -> reason)
                 }
               }
@@ -34,11 +34,18 @@ class DynamoRoutes(buildValueRepository: ActorRef[ValueRepository.Command])(impl
               val operationPerformed: Future[ValueRepository.Response] =
                 buildValueRepository.ask(ValueRepository.ClearValues(_))
               onSuccess(operationPerformed) {
-                case ValueRepository.OK         => complete("Values cleared")
+                case ValueRepository.OK => complete("Values cleared")
                 case ValueRepository.KO(reason) => complete(StatusCodes.InternalServerError -> reason)
               }
             }
           )
+        },
+        (delete & path(Remaining)) { id =>
+          val operationPerformed: Future[ValueRepository.Response] = buildValueRepository.ask(ValueRepository.RemoveValue(id, _))
+          onSuccess(operationPerformed) {
+            case ValueRepository.OK => complete("Value deleted")
+            case ValueRepository.KO(reason) => complete(StatusCodes.InternalServerError -> reason)
+          }
         },
         (get & path(Remaining)) { id =>
           val maybeValue: Future[Option[ValueRepository.Value]] =

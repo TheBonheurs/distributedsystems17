@@ -1,7 +1,7 @@
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorSystem, Behavior, PostStop}
 import akka.actor.typed.scaladsl.adapter._
-import akka.stream.ActorMaterializer
+import akka.stream.{ActorMaterializer, Materializer}
 import akka.http.scaladsl.Http.ServerBinding
 import akka.http.scaladsl.Http
 
@@ -25,8 +25,8 @@ object Server {
     implicit val untypedSystem: akka.actor.ActorSystem = ctx.system.toClassic
     // implicit materializer only required in Akka 2.5
     // in 2.6 having an implicit classic or typed ActorSystem in scope is enough
-    implicit val materializer: ActorMaterializer = ActorMaterializer()(ctx.system.toClassic)
-    implicit val ec: ExecutionContextExecutor = ctx.system.executionContext
+    implicit val materializer: Materializer = Materializer(ctx.system.toClassic)
+    implicit val executionContext: ExecutionContextExecutor = ctx.system.executionContext
 
     val buildValueRepository = ctx.spawn(ValueRepository(), "ValueRepository")
     val routes = new DynamoRoutes(buildValueRepository)

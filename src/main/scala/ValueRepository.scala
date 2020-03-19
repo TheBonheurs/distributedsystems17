@@ -24,6 +24,7 @@ object ValueRepository {
   sealed trait Command
   final case class AddValue(value: Value, replyTo: ActorRef[Response]) extends Command
   final case class GetValueByKey(key: String, replyTo: ActorRef[Option[Value]]) extends Command
+  final case class RemoveValue(key: String, replyTo: ActorRef[Response]) extends Command
   final case class ClearValues(replyTo: ActorRef[Response]) extends Command
 
 
@@ -47,6 +48,14 @@ object ValueRepository {
     case GetValueByKey(id, replyTo) =>
       replyTo ! values.get(id)
       Behaviors.same
+    case RemoveValue(id, replyTo) =>
+      if (values.contains(id)) {
+        replyTo ! OK
+        ValueRepository(values.removed(id))
+      } else {
+        replyTo ! KO("Not Found")
+        Behaviors.same
+      }
     case ClearValues(replyTo) =>
       replyTo ! OK
       ValueRepository(Map.empty)
