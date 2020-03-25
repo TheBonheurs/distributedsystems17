@@ -14,15 +14,9 @@ object ExternalServer {
     Behaviors.setup(context => new ExternalServer(context, valueRepository, host, port))
 
   sealed trait Command
-
-  final case class ExternalServerStarted(binding: ServerBinding) extends Command
-
-  final case class ExternalServerStopped() extends Command
-
-  final case class ExternalServerStartFailed(cause: Throwable) extends Command
-
-  final case class StopExternalServer() extends  Command
-
+  final case class Started(binding: ServerBinding) extends Command
+  final case class StartFailed(cause: Throwable) extends Command
+  final case class Stop() extends  Command
 }
 
 class ExternalServer(context: ActorContext[ExternalServer.Command], valueRepository: ActorRef[ValueRepository.Command], host: String, port: Int)
@@ -43,13 +37,13 @@ class ExternalServer(context: ActorContext[ExternalServer.Command], valueReposit
     Http.apply().bindAndHandle(routes.theValueRoutes, host, port)
 
   context.pipeToSelf(serverBinding) {
-    case Success(binding) => ExternalServerStarted(binding)
-    case Failure(ex) => ExternalServerStartFailed(ex)
+    case Success(binding) => Started(binding)
+    case Failure(ex) => StartFailed(ex)
   }
 
   override def onMessage(msg: Command): Behavior[Command] = {
     msg match {
-      case ExternalServerStarted(binding) =>
+      case Started(binding) =>
         started = true
         this.binding = binding;
         context.log.info(
@@ -59,14 +53,14 @@ class ExternalServer(context: ActorContext[ExternalServer.Command], valueReposit
 
         this
 
-      case StopExternalServer() =>
-        binding.unbind()
+      case Stop() =>
+        if (started) binding.unbind()
         context.log.info(
-          "Stopping server http://{}:{}/",
+          "Stopping internal server http://{}:{}/",
           binding.localAddress.getHostString,
           binding.localAddress.getPort)
         Behaviors.same
-      case ExternalServerStartFailed(cause) =>
+      case StartFailed(cause) =>
         throw new RuntimeException("External Server failed to start", cause)
     }
   }

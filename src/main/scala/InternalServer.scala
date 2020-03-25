@@ -14,15 +14,9 @@ object InternalServer {
     Behaviors.setup(context => new InternalServer(context, valueRepository, host, port))
 
   sealed trait Command
-
-  final case class InternalServerStarted(binding: ServerBinding) extends Command
-
-  final case class InternalServerStopped() extends Command
-
-  final case class InternalServerStartFailed(cause: Throwable) extends Command
-
-  final case class StopInternalServer() extends Command
-
+  final case class Started(binding: ServerBinding) extends Command
+  final case class StartFailed(cause: Throwable) extends Command
+  final case class Stop() extends Command
 }
 
 class InternalServer(context: ActorContext[InternalServer.Command], valueRepository: ActorRef[ValueRepository.Command], host: String, port: Int)
@@ -43,13 +37,13 @@ class InternalServer(context: ActorContext[InternalServer.Command], valueReposit
     Http.apply().bindAndHandle(routes.theValueRoutes, host, port)
 
   context.pipeToSelf(serverBinding) {
-    case Success(binding) => InternalServerStarted(binding)
-    case Failure(ex) => InternalServerStartFailed(ex)
+    case Success(binding) => Started(binding)
+    case Failure(ex) => StartFailed(ex)
   }
 
   override def onMessage(msg: Command): Behavior[Command] = {
     msg match {
-      case InternalServerStarted(binding) =>
+      case Started(binding) =>
         started = true
         this.binding = binding;
         context.log.info(
@@ -59,14 +53,14 @@ class InternalServer(context: ActorContext[InternalServer.Command], valueReposit
 
         this
 
-      case StopInternalServer() =>
-        this.binding.unbind()
+      case Stop() =>
+        if (started) this.binding.unbind()
         context.log.info(
           "Stopping server http://{}:{}/",
           binding.localAddress.getHostString,
           binding.localAddress.getPort)
         Behaviors.same
-      case InternalServerStartFailed(ex) =>
+      case StartFailed(ex) =>
         throw new RuntimeException("Interal Server failed to start", ex)
     }
   }
