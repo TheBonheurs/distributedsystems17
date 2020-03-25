@@ -45,7 +45,7 @@ class HttpSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with Sca
       val probe = testKit.createTestProbe[ValueRepository.Command]()
       val mockedPublisher = testKit.spawn(Behaviors.monitor(probe.ref, mockedBehavior))
 
-      val routes = new ExternalRoutes(mockedPublisher).theVlueRoutes
+      val routes = new ExternalRoutes(mockedPublisher).theValueRoutes
 
       Get("/values/myKey") ~> routes ~> check {
         status shouldEqual StatusCodes.OK
