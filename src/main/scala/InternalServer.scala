@@ -28,7 +28,7 @@ class InternalServer(context: ActorContext[InternalServer.Command], valueReposit
   implicit val classicActorSystem: actor.ActorSystem = context.system.toClassic
   implicit val materializer: Materializer = Materializer(classicActorSystem)
 
-  val routes = new DynamoRoutes(valueRepository)
+  val routes = new ExternalRoutes(valueRepository)
 
   var started = false
   var binding: ServerBinding = _;
