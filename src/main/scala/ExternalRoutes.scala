@@ -7,7 +7,7 @@ import akka.util.Timeout
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class DynamoRoutes(buildValueRepository: ActorRef[ValueRepository.Command])(implicit system: ActorSystem[_]) extends JsonSupport {
+class ExternalRoutes(buildValueRepository: ActorRef[ValueRepository.Command])(implicit system: ActorSystem[_]) extends JsonSupport {
 
   import akka.actor.typed.scaladsl.AskPattern._
 
