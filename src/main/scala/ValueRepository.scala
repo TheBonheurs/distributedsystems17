@@ -1,9 +1,11 @@
 import akka.actor.typed.{ActorRef, Behavior}
-import akka.actor.typed.scaladsl.Behaviors
+import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import akka.cluster.VectorClock
 
-object ValueRepository {
+import scala.collection.immutable.TreeMap
+import scala.collection.mutable
 
+object ValueRepository {
   // Definition of the a build job and its possible status values
   sealed trait Status
   object Successful extends Status
@@ -29,36 +31,36 @@ object ValueRepository {
 
 
   // This behavior handles all possible incoming messages and keeps the state in the function parameter
-  def apply(values: Map[String, Value] = Map.empty): Behavior[Command] = Behaviors.receiveMessage {
+  def apply(values: Map[String, Value] = Map.empty, nodeName: String): Behavior[Command] = Behaviors.receiveMessage {
     case AddValue(value, replyTo) if values.contains(value.key) =>
       values.get(value.key) match {
         case Some(previousValue) if value.version > previousValue.version =>
           replyTo ! OK
-          ValueRepository(values.+(value.key -> value))
+          ValueRepository(values.+(value.key -> value), nodeName)
         case Some(_) =>
           replyTo ! KO("Version too old")
           Behaviors.same
         case None =>
           replyTo ! OK
-          ValueRepository(values.+(value.key -> value))
+          ValueRepository(values.+(value.key -> value), nodeName)
       }
     case AddValue(value, replyTo) =>
       replyTo ! OK
-      ValueRepository(values.+(value.key -> Value(value.key, value.value, new VectorClock())))
+      ValueRepository(values.+(value.key -> Value(value.key, value.value, new VectorClock(TreeMap(nodeName -> 0)))), nodeName)
     case GetValueByKey(id, replyTo) =>
       replyTo ! values.get(id)
       Behaviors.same
     case RemoveValue(id, replyTo) =>
       if (values.contains(id)) {
         replyTo ! OK
-        ValueRepository(values.removed(id))
+        ValueRepository(values.removed(id), nodeName)
       } else {
         replyTo ! KO("Not Found")
         Behaviors.same
       }
     case ClearValues(replyTo) =>
       replyTo ! OK
-      ValueRepository(Map.empty)
+      ValueRepository(Map.empty, nodeName)
   }
 
 }
