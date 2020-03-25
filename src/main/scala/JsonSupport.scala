@@ -3,7 +3,7 @@ import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 
 import scala.collection.immutable.TreeMap
 
-trait JsonSupport extends SprayJsonSupport {
+trait conJsonSupport extends SprayJsonSupport {
   // import the default encoders for primitive types (Int, String, Lists etc)
 
   import spray.json._
