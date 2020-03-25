@@ -21,7 +21,7 @@ class HttpSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with Sca
   override def createActorSystem(): actor.ActorSystem = testKit.system.toClassic
 
   val valueRepository: ActorRef[ValueRepository.Command] = testKit.spawn(ValueRepository())
-  lazy val routes: Route = new DynamoRoutes(valueRepository).theValueRoutes
+  lazy val routes: Route = new ExternalRoutes(valueRepository).theValueRoutes
 
   "The service" should {
     "return a 404 when item does not exist" in {
@@ -45,7 +45,7 @@ class HttpSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with Sca
       val probe = testKit.createTestProbe[ValueRepository.Command]()
       val mockedPublisher = testKit.spawn(Behaviors.monitor(probe.ref, mockedBehavior))
 
-      val routes = new DynamoRoutes(mockedPublisher).theValueRoutes
+      val routes = new ExternalRoutes(mockedPublisher).theVlueRoutes
 
       Get("/values/myKey") ~> routes ~> check {
         status shouldEqual StatusCodes.OK
@@ -61,7 +61,7 @@ class HttpSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with Sca
       val probe = testKit.createTestProbe[ValueRepository.Command]()
       val mockedPublisher = testKit.spawn(Behaviors.monitor(probe.ref, mockedBehavior))
 
-      val routes = new DynamoRoutes(mockedPublisher).theValueRoutes
+      val routes = new ExternalRoutes(mockedPublisher).theValueRoutes
 
       Delete("/values/myKey") ~> routes ~> check {
         status shouldEqual StatusCodes.OK
