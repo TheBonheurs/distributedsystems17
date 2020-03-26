@@ -29,13 +29,13 @@ class InternalServer(context: ActorContext[InternalServer.Command], valueReposit
   implicit val classicActorSystem: actor.ActorSystem = context.system.toClassic
   implicit val materializer: Materializer = Materializer(classicActorSystem)
 
-  val routes = new ExternalRoutes(valueRepository)
+  val internalRoutes = new InternalRoutes(valueRepository)
 
   var started = false
   var binding: ServerBinding = _;
 
   val serverBinding: Future[Http.ServerBinding] =
-    Http.apply().bindAndHandle(routes.theValueRoutes, host, port)
+    Http.apply().bindAndHandle(internalRoutes.theInternalValueRoutes, host, port)
 
   context.pipeToSelf(serverBinding) {
     case Success(binding) => Started(binding)

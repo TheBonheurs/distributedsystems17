@@ -21,7 +21,7 @@ class HttpSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with Sca
 
   override def createActorSystem(): actor.ActorSystem = testKit.system.toClassic
 
-  val valueRepository: ActorRef[ValueRepository.Command] = testKit.spawn(ValueRepository())
+  val valueRepository: ActorRef[ValueRepository.Command] = testKit.spawn(ValueRepository(Map.empty, ""))
   lazy val routes: Route = new ExternalRoutes(valueRepository).theValueRoutes
 
   "The service" should {
