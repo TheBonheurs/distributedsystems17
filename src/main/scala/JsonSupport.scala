@@ -10,19 +10,6 @@ object JsonSupport extends SprayJsonSupport {
   import DefaultJsonProtocol._
   import ValueRepository._
 
-  implicit object StatusFormat extends RootJsonFormat[Status] {
-    def write(status: Status): JsValue = status match {
-      case Failed => JsString("Failed")
-      case Successful => JsString("Successful")
-    }
-
-    def read(json: JsValue): Status = json match {
-      case JsString("Failed") => Failed
-      case JsString("Successful") => Successful
-      case _ => throw DeserializationException("Status unexpected")
-    }
-  }
-
   implicit object AnyJsonFormat extends JsonFormat[Any] {
     def write(x: Any): JsValue with Serializable = x match {
       case n: Long => JsNumber(n)
