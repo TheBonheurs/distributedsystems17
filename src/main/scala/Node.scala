@@ -18,11 +18,13 @@ object Node {
 
   case object Stop extends Message
 
-  def apply(host: String, port: Int): Behavior[Message] = Behaviors.setup { ctx =>
+  def apply(name: String, externalHost: String, externalPort: Int, internalHost: String, internalPort: Int): Behavior[Message] = Behaviors.setup { ctx =>
+    ctx.log.info("Starting node {}", name)
+
     val buildValueRepository = ctx.spawn(ValueRepository(), "ValueRepository")
 
-    val internalServer = ctx.spawn(InternalServer(buildValueRepository, host, port), "InternalServer")
-    val externalServer = ctx.spawn(ExternalServer(buildValueRepository, host, port + 1), "ExternalServer")
+    val internalServer = ctx.spawn(InternalServer(buildValueRepository, internalHost, internalPort), "InternalServer")
+    val externalServer = ctx.spawn(ExternalServer(buildValueRepository, externalHost, externalPort), "ExternalServer")
 
     def starting(): Behaviors.Receive[Message] =
       Behaviors.receiveMessagePartial[Message] {
