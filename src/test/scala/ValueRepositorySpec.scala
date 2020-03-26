@@ -21,67 +21,69 @@ class ValueRepositorySpec extends AnyFlatSpec with Matchers with BeforeAndAfter 
   import akka.actor.typed.scaladsl.AskPattern._
 
   it should "add a value" in {
-    val valueRepository = testKit.spawn(ValueRepository())
+    val valueRepository = testKit.spawn(ValueRepository("ValueRepositorySpec"))
 
-    result(valueRepository.ask(AddValue(Value("myKey", "myValue"), _: ActorRef[Response])), 1 seconds) should be(OK)
+    result(valueRepository.ask(AddValue(Value("myKey", "myValue"), _: ActorRef[Response])), 1 second) should be(OK)
   }
 
   it should "read an empty value" in {
-    val valueRepository = testKit.spawn(ValueRepository())
+    val valueRepository = testKit.spawn(ValueRepository("ValueRepositorySpec"))
 
-    result(valueRepository.ask(GetValueByKey("myKey", _: ActorRef[Option[Value]])), 1 seconds) should be(None)
+    result(valueRepository.ask(GetValueByKey("myKey", _: ActorRef[Option[Value]])), 1 second) should be(None)
   }
 
   it should "read an added value" in {
-    val valueRepository = testKit.spawn(ValueRepository())
+    val valueRepository = testKit.spawn(ValueRepository("ValueRepositorySpec"))
 
-    result(valueRepository.ask(AddValue(Value("myKey", "myValue"), _: ActorRef[Response])), 1 seconds) should be(OK)
+    result(valueRepository.ask(AddValue(Value("myKey", "myValue"), _: ActorRef[Response])), 1 second) should be(OK)
 
-    result(valueRepository.ask(GetValueByKey("myKey", _: ActorRef[Option[Value]])), 1 seconds) should be(Option(Value("myKey", "myValue")))
+    result(valueRepository.ask(GetValueByKey("myKey", _: ActorRef[Option[Value]])), 1 second) should be(Option(Value("myKey", "myValue", new VectorClock(TreeMap("ValueRepositorySpec" -> 0)))))
   }
 
   it should "remove a value" in {
-    val valueRepository = testKit.spawn(ValueRepository())
+    val valueRepository = testKit.spawn(ValueRepository("ValueRepositorySpec"))
 
-    result(valueRepository.ask(AddValue(Value("myKey", "myValue"), _: ActorRef[Response])), 1 seconds) should be(OK)
+    result(valueRepository.ask(AddValue(Value("myKey", "myValue"), _: ActorRef[Response])), 1 second) should be(OK)
 
-    result(valueRepository.ask(RemoveValue("myKey", _: ActorRef[Response])), 1 seconds) should be(OK)
+    result(valueRepository.ask(RemoveValue("myKey", _: ActorRef[Response])), 1 second) should be(OK)
 
-    result(valueRepository.ask(GetValueByKey("myKey", _: ActorRef[Option[Value]])), 1 seconds) should be(None)
+    result(valueRepository.ask(GetValueByKey("myKey", _: ActorRef[Option[Value]])), 1 second) should be(None)
   }
 
   it should "return an error when removing a value if it does not extist" in {
-    val valueRepository = testKit.spawn(ValueRepository())
+    val valueRepository = testKit.spawn(ValueRepository("ValueRepositorySpec"))
 
     result(valueRepository.ask(RemoveValue("myKey", _: ActorRef[Response])), 1 second) should be(KO("Not Found"))
   }
 
   it should "update a value if the version is newer" in {
-    val valueRepository = testKit.spawn(ValueRepository())
+    val valueRepository = testKit.spawn(ValueRepository("ValueRepositorySpec"))
 
-    result(valueRepository.ask(AddValue(Value("myKey", "myOtherValue", new VectorClock(TreeMap("Node" -> 0))), _: ActorRef[Response])), 1 second) should be(OK)
+    result(valueRepository.ask(AddValue(Value("myKey", "myOtherValue"), _: ActorRef[Response])), 1 second) should be(OK)
 
-    result(valueRepository.ask(AddValue(Value("myKey", "myOtherValue", new VectorClock(TreeMap("Node" -> 1))), _: ActorRef[Response])), 1 second) should be(OK)
+    result(valueRepository.ask(AddValue(Value("myKey", "myOtherValue", new VectorClock(TreeMap("ValueRepositorySpec" -> 0, "MyNode" -> 1))), _: ActorRef[Response])), 1 second) should be(OK)
   }
 
   it should "not update a value if the version is equal" in {
-    val valueRepository = testKit.spawn(ValueRepository())
+    val valueRepository = testKit.spawn(ValueRepository("ValueRepositorySpec"))
 
-    result(valueRepository.ask(AddValue(Value("myKey", "myOtherValue", new VectorClock(TreeMap("Node" -> 0))), _: ActorRef[Response])), 1 second) should be(OK)
+    result(valueRepository.ask(AddValue(Value("myKey", "myOtherValue"), _: ActorRef[Response])), 1 second) should be(OK)
 
-    result(valueRepository.ask(AddValue(Value("myKey", "myAnotherValue", new VectorClock(TreeMap("Node" -> 0))), _: ActorRef[Response])), 1 second) should be(KO("Version too old"))
+    result(valueRepository.ask(AddValue(Value("myKey", "myAnotherValue", new VectorClock(TreeMap("ValueRepositorySpec" -> 0))), _: ActorRef[Response])), 1 second) should be(KO("Version too old"))
   }
 
   it should "not update a value if the version is older" in {
-    val valueRepository = testKit.spawn(ValueRepository())
+    val valueRepository = testKit.spawn(ValueRepository("ValueRepositorySpec"))
 
-    result(valueRepository.ask(AddValue(Value("myKey", "myOtherValue", new VectorClock(TreeMap("Node" -> 1))), _: ActorRef[Response])), 1 second) should be(OK)
+    result(valueRepository.ask(AddValue(Value("myKey", "value 1"), _: ActorRef[Response])), 1 second) should be(OK)
+    result(valueRepository.ask(AddValue(Value("myKey", "value 2", new VectorClock(TreeMap("ValueRepositorySpec" -> 1))), _: ActorRef[Response])), 1 second) should be(OK)
+    result(valueRepository.ask(AddValue(Value("myKey", "value 3", new VectorClock(TreeMap("ValueRepositorySpec" -> 0))), _: ActorRef[Response])), 1 second) should be(KO("Version too old"))
 
-    result(valueRepository.ask(AddValue(Value("myKey", "myAnotherValue", new VectorClock(TreeMap("Node" -> 0))), _: ActorRef[Response])), 1 second) should be(KO("Version too old"))
+    result(valueRepository.ask(GetValueByKey("myKey", _: ActorRef[Option[Value]])), 1 second) should be (Some(Value("myKey", "value 2", new VectorClock(TreeMap("ValueRepositorySpec" -> 1)))))
   }
 
   it should "clear the repository" in {
-    val valueRepository = testKit.spawn(ValueRepository())
+    val valueRepository = testKit.spawn(ValueRepository("ValueRepositorySpec"))
 
     result(valueRepository.ask(AddValue(Value("myKey", "myValue"), _: ActorRef[Response])), 1 second) should be(OK)
 

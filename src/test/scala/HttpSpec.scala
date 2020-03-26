@@ -12,7 +12,8 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
-class HttpSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with ScalatestRouteTest with JsonSupport {
+class HttpSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with ScalatestRouteTest {
+  import JsonSupport._
 
   lazy val testKit: ActorTestKit = ActorTestKit()
 
@@ -20,7 +21,7 @@ class HttpSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with Sca
 
   override def createActorSystem(): actor.ActorSystem = testKit.system.toClassic
 
-  val valueRepository: ActorRef[ValueRepository.Command] = testKit.spawn(ValueRepository())
+  val valueRepository: ActorRef[ValueRepository.Command] = testKit.spawn(ValueRepository(Map.empty, ""))
   lazy val routes: Route = new ExternalRoutes(valueRepository).theValueRoutes
 
   "The service" should {
@@ -88,5 +89,4 @@ class HttpSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with Sca
       }
     }
   }
-
 }
