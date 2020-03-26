@@ -1,6 +1,7 @@
 import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.Behaviors
 import akka.http.scaladsl.Http.ServerBinding
+import main.NodeConfig
 
 object Node {
 
@@ -22,7 +23,7 @@ object Node {
     ctx.log.info("Starting node {}", config.name)
 
     for (node <- allNodes) {
-      DHT.addNode(RingNode(node.index, node.internalHost, node.internalPort))
+      DistributedHashTable.addNode(RingNode(node.index, node.internalHost, node.internalPort))
     }
 
     val buildValueRepository = ctx.spawn(ValueRepository(config.name), "ValueRepository")
