@@ -1,4 +1,3 @@
-import java.net.InetAddress
 import java.security.MessageDigest
 
 import org.scalatest.BeforeAndAfter
@@ -19,8 +18,8 @@ class DHTTest extends AnyFlatSpec with Matchers with BeforeAndAfter {
   }
 
   "add node" should "add a node to the ring" in {
-    val node1 = RingNode(BigInt(1), InetAddress.getLocalHost)
-    val node2 = RingNode(BigInt(10), InetAddress.getLocalHost)
+    val node1 = RingNode(BigInt(1), "localhost", 8000)
+    val node2 = RingNode(BigInt(10), "localhost", 8001)
 
     DHT.addNode(node2)
     DHT.addNode(node1)
@@ -31,11 +30,11 @@ class DHTTest extends AnyFlatSpec with Matchers with BeforeAndAfter {
   }
 
   "preference list" should "return top N nodes" in {
-    val node1 = RingNode(BigInt(1), InetAddress.getLocalHost)
-    val node2 = RingNode(BigInt(100), InetAddress.getLocalHost)
-    val node3 = RingNode(BigInt(200), InetAddress.getLocalHost)
-    val node4 = RingNode(BigInt(300), InetAddress.getLocalHost)
-    val node5 = RingNode(BigInt(400), InetAddress.getLocalHost)
+    val node1 = RingNode(BigInt(1), "localhost", 8000)
+    val node2 = RingNode(BigInt(100), "localhost", 8001)
+    val node3 = RingNode(BigInt(200), "localhost", 8002)
+    val node4 = RingNode(BigInt(300), "localhost", 8003)
+    val node5 = RingNode(BigInt(400), "localhost", 8004)
 
     DHT.addNode(node2)
     DHT.addNode(node4)
@@ -48,11 +47,11 @@ class DHTTest extends AnyFlatSpec with Matchers with BeforeAndAfter {
   }
 
   "preference list" should "return top N nodes circularly" in {
-    val node1 = RingNode(BigInt(1), InetAddress.getLocalHost)
-    val node2 = RingNode(BigInt(100), InetAddress.getLocalHost)
-    val node3 = RingNode(BigInt(200), InetAddress.getLocalHost)
-    val node4 = RingNode(BigInt(300), InetAddress.getLocalHost)
-    val node5 = RingNode(BigInt(400), InetAddress.getLocalHost)
+    val node1 = RingNode(BigInt(1), "localhost", 8000)
+    val node2 = RingNode(BigInt(100), "localhost", 8001)
+    val node3 = RingNode(BigInt(200), "localhost", 8002)
+    val node4 = RingNode(BigInt(300), "localhost", 8003)
+    val node5 = RingNode(BigInt(400), "localhost", 8004)
 
     DHT.addNode(node2)
     DHT.addNode(node4)

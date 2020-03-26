@@ -1,4 +1,2 @@
-import java.net.InetAddress
-
-case class RingNode(position: BigInt, address: InetAddress)
+case class RingNode(position: BigInt, host: String, port: Int)
 
