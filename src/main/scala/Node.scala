@@ -19,7 +19,7 @@ object Node {
   case object Stop extends Message
 
   def apply(host: String, port: Int, name: String): Behavior[Message] = Behaviors.setup { ctx =>
-    val buildValueRepository = ctx.spawn(ValueRepository(Map.empty, name), "ValueRepository")
+    val buildValueRepository = ctx.spawn(ValueRepository(name), "ValueRepository")
 
     val internalServer = ctx.spawn(InternalServer(buildValueRepository, host, port), "InternalServer")
     val externalServer = ctx.spawn(ExternalServer(buildValueRepository, host, port + 1), "ExternalServer")
