@@ -84,7 +84,7 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
 
 
   context.pipeToSelf() {
-    case Success(_) => Started()
+    case Success(_) => Started(
     case Failure(ex) => StartFailed(ex)
   }
 
@@ -93,16 +93,13 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
     for (x <- DHT.getTopNPreferenceNodes(DHT.getHash(key), N) ) {
       responses + sendToOtherNodes(hosts.get(x.address))
     }
-
     if (responses.size < R) {
       throw TimeoutException("")
     }
-
     val result = getResponses(key).onComplete {
       case Success(a) => a
       case Failure(e) => context.log.error(s"Failed to get values from the ValueRepository, exceptionm = $e")
     }
-
     checkVersion(result)
 
 
@@ -142,6 +139,7 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
       response.discardEntityBytes()
     case _ => sys.error("something wrong")
   }*/
+
 
 }
 
