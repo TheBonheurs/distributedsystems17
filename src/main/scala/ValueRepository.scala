@@ -3,16 +3,7 @@ import akka.actor.typed.scaladsl.Behaviors
 import akka.cluster.VectorClock
 
 object ValueRepository {
-
-  // Definition of the a build job and its possible status values
-  sealed trait Status
-  object Successful extends Status
-  object Failed extends Status
-
-  final case class Version(node: String, version: Int)
-  final case class VersionVector(values: Seq[Version])
-
-  final case class Value(key: String, value: String, version: VectorClock)
+  final case class Value(key: String, value: String, version: VectorClock = new VectorClock())
   final case class Values(values: Seq[Value])
 
   // Trait defining successful and failure responses
@@ -30,7 +21,7 @@ object ValueRepository {
 
   // This behavior handles all possible incoming messages and keeps the state in the function parameter
   def apply(values: Map[String, Value] = Map.empty): Behavior[Command] = Behaviors.receiveMessage {
-    case AddValue(value, replyTo) if values.contains(value.key) =>
+    case AddValue(value, replyTo) =>
       values.get(value.key) match {
         case Some(previousValue) if value.version > previousValue.version =>
           replyTo ! OK
@@ -42,9 +33,6 @@ object ValueRepository {
           replyTo ! OK
           ValueRepository(values.+(value.key -> value))
       }
-    case AddValue(value, replyTo) =>
-      replyTo ! OK
-      ValueRepository(values.+(value.key -> Value(value.key, value.value, new VectorClock())))
     case GetValueByKey(id, replyTo) =>
       replyTo ! values.get(id)
       Behaviors.same
