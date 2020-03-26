@@ -15,7 +15,7 @@ import akka.stream.Materializer
 import spray.json.DefaultJsonProtocol._
 import spray.json._
 
-import scala.collection.mutable
+import scala.collection.{immutable, mutable}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
@@ -75,27 +75,28 @@ object InternalClient {
 
 final case class Value(key: String, value: String, version: VectorClock)
 
+implicit val valueFormat = jsonFormat3(Value)
+
 implicit object VectorFormat extends RootJsonFormat[VectorClock]{
 
-  def write(vc: VectorClock) = JsObject(
-    List(
-      Some("versions" -> vc.versions ),
-    ).flatten: _*
-  )
+  def write(vc: VectorClock): JsValue = {
+    JsObject("versions" -> JsObject(
+        "Node" -> JsArray(vc.versions.map(_._1.toString.toJson).toVector),
+        "Version" -> JsArray(vc.versions.map(_._2.toJson).toVector)
+      )
+    )
+  }
 
   def read(json: JsValue) = {
-    val jsObject = json.asJsObject
-
-    jsObject.getFields("versions") match {
-      case Seq(versions) => VectorClock(
-        versions.convertTo[mutable.TreeMap[Node, Long]
-      )
+    json.asJsObject.getFields("versions") match {
+      case JsObject(fields) => fields match {
+        case Seq(JsArray(nodes), JsArray(versions)) => VectorClock(immutable.TreeMap[Node, Long]() ++
+          nodes.map(_.convertTo[String]).toList.zip(versions.map(_.convertTo[Long]).toList).toMap)
+      }
     }
   }
 
 }
-
-implicit val valueFormat = jsonFormat3(Value)
 
 class InternalClient(context: ActorContext[InternalClient.Command], valueRepository: ActorRef[ValueRepository.Command], host: String, port: Int)
   extends AbstractBehavior[InternalClient.Command](context) {
@@ -115,11 +116,11 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
   val W = N;
 
 
-  context.pipeToSelf() {
-    case Success(_) => Started()
-    case Failure(ex) => StartFailed(ex)
-  }
-
+  /**
+   * Method executed with get() operation
+   * @param key the key to get
+   * @return the value of that key
+   */
   def read(key: String): Value = {
     val futures: List[Future[HttpResponse]] = List.empty[Future[HttpResponse]]
 
@@ -147,6 +148,11 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
 
   }
 
+  /**
+   *
+   * @param v
+   * @return
+   */
   def write(v: Value): Boolean = {
     val futures: List[Future[HttpResponse]] = List.empty
 
