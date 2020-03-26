@@ -113,7 +113,7 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
   var started = false
 
   val N = 3;
-  val R = N-1;
+  val R = N - 1;
   val W = N;
 
   val hosts = Map()
@@ -124,17 +124,17 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
     case Failure(ex) => StartFailed(ex)
   }
 
-  def read (key : String): Value = {
+  def read(key: String): Value = {
     val futures = List.empty[Future[HttpResponse]]
 
     // Use DHT to get top N nodes
-    for (x <- DHT.getTopNPreferenceNodes(DHT.getHash(key), N) ) {
+    for (x <- DHT.getTopNPreferenceNodes(DHT.getHash(key), N)) {
       futures + getOtherNodes(key, hosts.get(x.address))
     }
     val responses = Future.sequence(futures.map(_.transform(Success(_))))
 
     // get only the successful ones
-    val successes = responses.map(_.collect{case Success(x)=>x})
+    val successes = responses.map(_.collect { case Success(x) => x })
 
     if (successes.isCompleted) {
       if (successes.value.size < R) {
@@ -151,20 +151,20 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
 
   }
 
-  def write (v: Value): Boolean = {
+  def write(v: Value): Boolean = {
     val futures = List.empty[Future[HttpResponse]]
 
     // Use DHT to get top N nodes
-    for (x <- DHT.getTopNPreferenceNodes(DHT.getHash(v.key), N) ) {
+    for (x <- DHT.getTopNPreferenceNodes(DHT.getHash(v.key), N)) {
       futures + putOtherNodes(v.key, hosts.get(x.address))
     }
 
     var counter = 0
-    futures.foreach(_.map{
-      case response: HttpResponse @ HttpResponse(StatusCodes.OK, _, _, _) =>
+    futures.foreach(_.map {
+      case response: HttpResponse@HttpResponse(StatusCodes.OK, _, _, _) =>
         counter += 1
     })
-    if (counter < W-1) {
+    if (counter < W - 1) {
       return false
     }
     true
@@ -172,50 +172,66 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
 
   /**
    * Send get request to server
-   * @param key key of the value to get
+   *
+   * @param key     key of the value to get
    * @param address address of the server
    * @return Http Response
    */
-  def getOtherNodes(key: String, address : Uri): Future[HttpResponse] = {
+  def getOtherNodes(key: String, address: Uri): Future[HttpResponse] = {
     Http().singleRequest(
       HttpRequest(uri = address + "/" + key))
   }
 
   /**
    *
-   * @param v value to write
+   * @param v       value to write
    * @param address address of the server
    * @return
    */
-  def putOtherNodes(v: Value, address : Uri): Future[HttpResponse] = {
+  def putOtherNodes(v: Value, address: Uri): Future[HttpResponse] = {
     Http().singleRequest(HttpRequest(
       method = HttpMethods.POST,
       uri = address + "/write",
       entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, v.toJson)
-      )
+    )
     )
   }
 
   /**
    * Filters the value with the latest version
+   *
    * @param values values from which to filter
    * @return value with the largest vectorclock
    */
   def checkVersion(values: List[Value]): Value = {
     var result = values.head
-    for( a <- values; b <- values) {
+    for (a <- values; b <- values) {
       if (a.version.>(b.version) && result.version.<(a.version)) {
         result = a
       }
     }
     result
   }
+}
 
   /*override def onMessage(msg: InternalClient.Command): Behavior[InternalClient.Command] = {
     msg match {
       case GetValues() =>
+<<<<<<< HEAD
 
     }
+=======
+
+    }
+  }
+
+  /*responseFuture.map {
+    case response @ HttpResponse(StatusCodes.OK, _, _, _) =>
+      val setCookies = response.headers[`Set-Cookie`]
+      println(s"Cookies set by a server: $setCookies")
+      response.discardEntityBytes()
+    case _ => sys.error("something wrong")
+>>>>>>> 41ac64c... cleanup
   }*/
 
 }
