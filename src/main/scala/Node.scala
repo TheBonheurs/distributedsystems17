@@ -217,10 +217,8 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
   /*override def onMessage(msg: InternalClient.Command): Behavior[InternalClient.Command] = {
     msg match {
       case GetValues() =>
-<<<<<<< HEAD
 
     }
-=======
 
     }
   }
@@ -231,7 +229,7 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
       println(s"Cookies set by a server: $setCookies")
       response.discardEntityBytes()
     case _ => sys.error("something wrong")
->>>>>>> 41ac64c... cleanup
+
   }*/
 
 }
