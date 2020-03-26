@@ -1,5 +1,6 @@
-import java.net.InetAddress
-import java.util.concurrent.TimeoutException
+import akka.http.scaladsl.unmarshalling.Unmarshal
+import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
+import spray.json.DefaultJsonProtocol._
 
 import akka.actor
 import akka.actor.typed.scaladsl.adapter._
@@ -8,7 +9,7 @@ import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.Http.ServerBinding
-import akka.http.scaladsl.model.{HttpRequest, HttpResponse, Uri}
+import akka.http.scaladsl.model.{HttpMethods, HttpRequest, HttpResponse, Uri}
 import akka.stream.Materializer
 
 import scala.concurrent.{Await, ExecutionContextExecutor, Future, TimeoutException}
@@ -64,6 +65,10 @@ object InternalClient {
   final case class GetValues() extends Command
 }
 
+final case class Value(key: String, value: String, version: VectorClock)
+
+implicit val valueFormat = jsonFormat1(Value)
+
 class InternalClient(context: ActorContext[InternalClient.Command], valueRepository: ActorRef[ValueRepository.Command], host: String, port: Int)
   extends AbstractBehavior[InternalClient.Command](context) {
 
@@ -91,7 +96,7 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
   def read (key : String): Unit = {
     val responses = Seq.empty[Future[HttpResponse]]
     for (x <- DHT.getTopNPreferenceNodes(DHT.getHash(key), N) ) {
-      responses + sendToOtherNodes(hosts.get(x.address))
+      responses + sendToOtherNodes(key, hosts.get(x.address))
     }
     if (responses.size < R) {
       throw TimeoutException("")
@@ -110,9 +115,9 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
 
   }
 
-  def sendToOtherNodes(address : Uri): Future[HttpResponse] = {
-    Http().singleRequest(HttpRequest(uri = address))
-    // TODO: add http request
+  def sendToOtherNodes(key: String, address : Uri): Future[HttpResponse] = {
+    Http().singleRequest(
+      HttpRequest(uri = address + "/" + key))
   }
 
   def getResponses(key: String): Future[Option[ValueRepository.Value]] = {
