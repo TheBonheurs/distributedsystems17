@@ -3,23 +3,20 @@ import java.util.concurrent.TimeoutException
 
 import akka.actor
 import akka.actor.typed.scaladsl.adapter._
-import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
+import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
 import akka.cluster.VectorClock
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.Http.ServerBinding
-import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpMethods, HttpRequest, HttpResponse, StatusCodes, Uri}
-import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
+import akka.http.scaladsl.model._
+import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
+import spray.json.DefaultJsonProtocol._
 import spray.json._
-import DefaultJsonProtocol._
 
 import scala.collection.mutable
-import scala.concurrent.Future
-import scala.util.{Failure, Success}
 import scala.concurrent.ExecutionContext.Implicits.global
-
-import scala.concurrent.{Await, ExecutionContextExecutor, Future, TimeoutException}
+import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
 
@@ -158,7 +155,7 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
     for (x <- DHT.getTopNPreferenceNodes(DHT.getHash(v.key), N)) {
       futures + putOtherNodes(v.key, hosts.get(x.address))
     }
-
+    
     var counter = 0
     futures.foreach(_.map {
       case response: HttpResponse@HttpResponse(StatusCodes.OK, _, _, _) =>
