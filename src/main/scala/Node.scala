@@ -1,6 +1,22 @@
-import akka.actor.typed.Behavior
-import akka.actor.typed.scaladsl.Behaviors
+import java.net.InetAddress
+import java.util.concurrent.TimeoutException
+
+import akka.actor
+import akka.actor.typed.scaladsl.adapter._
+import akka.actor.typed.scaladsl.AskPattern._
+import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
+import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
+import akka.http.scaladsl.Http
 import akka.http.scaladsl.Http.ServerBinding
+import akka.http.scaladsl.model.{HttpRequest, HttpResponse, Uri}
+import akka.stream.Materializer
+
+import scala.concurrent.{Await, ExecutionContextExecutor, Future, TimeoutException}
+import scala.util.{Failure, Success}
+
+
+
+
 
 object Node {
 
@@ -36,3 +52,93 @@ object Node {
   }
 
 }
+
+object InternalClient {
+  def apply(valueRepository: ActorRef[ValueRepository.Command], host: String, port: Int): Behavior[Command] =
+    Behaviors.setup(context => new InternalClient(context, valueRepository, host, port))
+
+  sealed trait Command
+  final case class Started() extends Command
+  final case class StartFailed(cause: Throwable) extends Command
+  final case class Stop() extends  Command
+  final case class GetValues() extends Command
+}
+
+class InternalClient(context: ActorContext[InternalClient.Command], valueRepository: ActorRef[ValueRepository.Command], host: String, port: Int)
+  extends AbstractBehavior[InternalClient.Command](context) {
+
+  import InternalClient._
+
+  implicit val actorSystem: ActorSystem[Nothing] = context.system
+  implicit val classicActorSystem: actor.ActorSystem = context.system.toClassic
+  implicit val materializer: Materializer = Materializer(classicActorSystem)
+
+  val routes = new ExternalRoutes(valueRepository)
+
+  var started = false
+
+  val N = 3;
+  val R = N-1;
+  //val responseFuture: Future[HttpResponse] = sendToOtherNodes()
+  val hosts = Map()
+
+
+  context.pipeToSelf() {
+    case Success(binding) => Started()
+    case Failure(ex) => StartFailed(ex)
+  }
+
+  def read (key : String): Unit = {
+    val responses = Seq.empty[Future[HttpResponse]]
+    for (x <- DHT.getTopNPreferenceNodes(DHT.getHash(key), N) ) {
+      responses + sendToOtherNodes(hosts.get(x.address))
+    }
+    val result = getResponses(key).onComplete {
+      case Success(a) => a
+      case Failure(e) => context.log.error(s"Failed to get values from the ValueRepository, exceptionm = $e")
+    }
+    if (responses.size < R) {
+      throw TimeoutException("")
+    }
+    checkVersion(result)
+
+
+
+  }
+
+  def write (): Unit = {
+
+  }
+
+  def sendToOtherNodes(address : Uri): Future[HttpResponse] = {
+    Http().singleRequest(HttpRequest(uri = address))
+    // TODO: add http request
+  }
+
+  def getResponses(key: String): Future[Option[ValueRepository.Value]] = {
+    valueRepository.ask(ValueRepository.GetValueByKey(key, _))
+    repo.apply(Map.empty); // TODO: replace with actual logic that checks the responses
+    repo.Values
+  }
+
+  def checkVersion(vectors: ValueRepository.Values.type): Unit = {
+    valueRepository.as
+  }
+
+  override def onMessage(msg: InternalClient.Command): Behavior[InternalClient.Command] = {
+    msg match {
+      case GetValues() =>
+        bui
+    }
+  }
+
+  responseFuture.map {
+    case response @ HttpResponse(StatusCodes.OK, _, _, _) =>
+      val setCookies = response.headers[`Set-Cookie`]
+      println(s"Cookies set by a server: $setCookies")
+      response.discardEntityBytes()
+    case _ => sys.error("something wrong")
+  }
+
+}
+
