@@ -20,8 +20,7 @@ object Node {
 
   def apply(name: String, externalHost: String, externalPort: Int, internalHost: String, internalPort: Int): Behavior[Message] = Behaviors.setup { ctx =>
     ctx.log.info("Starting node {}", name)
-
-    val buildValueRepository = ctx.spawn(ValueRepository(), "ValueRepository")
+    val buildValueRepository = ctx.spawn(ValueRepository(name), "ValueRepository")
 
     val internalServer = ctx.spawn(InternalServer(buildValueRepository, internalHost, internalPort), "InternalServer")
     val externalServer = ctx.spawn(ExternalServer(buildValueRepository, externalHost, externalPort), "ExternalServer")

@@ -7,7 +7,7 @@ import akka.util.Timeout
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class ExternalRoutes(buildValueRepository: ActorRef[ValueRepository.Command])(implicit system: ActorSystem[_]) {
+class InternalRoutes(buildValueRepository: ActorRef[ValueRepository.Command])(implicit system: ActorSystem[_]) {
   import JsonSupport._
   import akka.actor.typed.scaladsl.AskPattern._
 
@@ -15,11 +15,10 @@ class ExternalRoutes(buildValueRepository: ActorRef[ValueRepository.Command])(im
   // the ask is failed with a TimeoutException
   implicit val timeout: Timeout = 3.seconds
 
-  lazy val theValueRoutes: Route =
-    pathPrefix("values") {
+  lazy val theInternalValueRoutes: Route =
+    pathPrefix("internal") {
       concat(
         pathEnd {
-          concat(
             post {
               entity(as[ValueRepository.Value]) { job =>
                 val operationPerformed: Future[ValueRepository.Response] =
@@ -29,29 +28,25 @@ class ExternalRoutes(buildValueRepository: ActorRef[ValueRepository.Command])(im
                   case ValueRepository.KO(reason) => complete(StatusCodes.InternalServerError -> reason)
                 }
               }
-            },
-            delete {
-              val operationPerformed: Future[ValueRepository.Response] =
-                buildValueRepository.ask(ValueRepository.ClearValues(_))
-              onSuccess(operationPerformed) {
-                case ValueRepository.OK => complete("Values cleared")
-                case ValueRepository.KO(reason) => complete(StatusCodes.InternalServerError -> reason)
-              }
             }
-          )
-        },
-        (delete & path(Remaining)) { id =>
-          val operationPerformed: Future[ValueRepository.Response] = buildValueRepository.ask(ValueRepository.RemoveValue(id, _))
-          onSuccess(operationPerformed) {
-            case ValueRepository.OK => complete("Value deleted")
-            case ValueRepository.KO(reason) => complete(StatusCodes.InternalServerError -> reason)
-          }
         },
         (get & path(Remaining)) { id =>
           val maybeValue: Future[Option[ValueRepository.Value]] =
             buildValueRepository.ask(ValueRepository.GetValueByKey(id, _))
           rejectEmptyResponse {
             complete(maybeValue)
+          }
+        },
+        path("resolve") {
+          post {
+            entity(as[ValueRepository.Value]) { job =>
+              val operationPerformed: Future[ValueRepository.Response] =
+                buildValueRepository.ask(ValueRepository.AddValue(job, _))
+              onSuccess(operationPerformed) {
+                case ValueRepository.OK => complete("Value added")
+                case ValueRepository.KO(reason) => complete(StatusCodes.InternalServerError -> reason)
+              }
+            }
           }
         }
       )
