@@ -1,6 +1,6 @@
 import java.util.concurrent.TimeoutException
 
-import JsonSupport._
+import InternalClient.{Get, Put}
 import akka.actor
 import akka.actor.typed.scaladsl.adapter._
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
@@ -9,7 +9,6 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
-import spray.json._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -20,15 +19,16 @@ object InternalClient {
     Behaviors.setup(context => new InternalClient(context, valueRepository, host, port))
 
   sealed trait Command
-  final case class Started() extends Command
-  final case class StartFailed(cause: Throwable) extends Command
-  final case class Stop() extends  Command
-  final case class GetValues() extends Command
+  final case class Put(value: ValueRepository.Value) extends Command
+  final case class Get(key: String) extends  Command
 }
 
 
 class InternalClient(context: ActorContext[InternalClient.Command], valueRepository: ActorRef[ValueRepository.Command], host: String, port: Int)
   extends AbstractBehavior[InternalClient.Command](context) {
+
+  import spray.json._
+  import JsonSupport._
 
   implicit val actorSystem: ActorSystem[Nothing] = context.system
   implicit val classicActorSystem: actor.ActorSystem = context.system.toClassic
@@ -66,12 +66,14 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
       } else {
         val values = List.empty[ValueRepository.Value]
 
-        for (y <- successes.value) {
-          values :+ Unmarshal(y).to[ValueRepository.Value]
+        for (y <- successes.value.map(_.toOption)) {
+          for (z <- y.get) {
+            values :+ Unmarshal(z).to[ValueRepository.Value]
+          }
         }
-        checkVersion(values)
+        return checkVersion(values)
       }
-    }
+    } else return null // moet echt iets beters voor verzinnen straks
 
   }
 
@@ -140,5 +142,14 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
       }
     }
     result
+  }
+
+  override def onMessage(msg: InternalClient.Command): Behavior[InternalClient.Command] = {
+    msg match {
+      case Put(value) => write(value)
+        Behaviors.same
+      case Get(key) => read(key)
+        Behaviors.same
+    }
   }
 }
