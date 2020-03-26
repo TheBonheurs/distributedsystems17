@@ -5,6 +5,7 @@ import akka.cluster.VectorClock
 
 import scala.collection.immutable.TreeMap
 
+
 // Definition of a build job and its possible status values
 object ValueRepository {
 
