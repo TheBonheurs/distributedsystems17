@@ -12,7 +12,8 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
-class HttpSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with ScalatestRouteTest with JsonSupport {
+class HttpSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with ScalatestRouteTest {
+  import JsonSupport._
 
   lazy val testKit: ActorTestKit = ActorTestKit()
 
@@ -88,5 +89,4 @@ class HttpSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with Sca
       }
     }
   }
-
 }
