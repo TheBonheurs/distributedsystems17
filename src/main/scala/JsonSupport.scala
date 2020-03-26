@@ -3,7 +3,7 @@ import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 
 import scala.collection.immutable.TreeMap
 
-trait JsonSupport extends SprayJsonSupport {
+object JsonSupport extends SprayJsonSupport {
   // import the default encoders for primitive types (Int, String, Lists etc)
 
   import spray.json._
@@ -39,12 +39,13 @@ trait JsonSupport extends SprayJsonSupport {
   }
 
   implicit def treeFormat[A: JsonFormat : Ordering, B: JsonFormat]: RootJsonFormat[TreeMap[A, B]] = new RootJsonFormat[TreeMap[A, B]] {
-    override def write(obj: TreeMap[A, B]): JsValue = obj.iterator.map(a => Map(a._1 -> a._2)).toList.toJson
-    override def read(json: JsValue): TreeMap[A, B] = TreeMap.from(json.convertTo[List[Map[Any, Any]]].map(a => (a.keys.head.asInstanceOf[A], a.values.head.asInstanceOf[B])))
+    //noinspection RedundantCollectionConversion
+    override def write(obj: TreeMap[A, B]): JsValue = obj.toMap.toJson
+    override def read(json: JsValue): TreeMap[A, B] = TreeMap.from(json.convertTo[Map[A, B]])
   }
 
   implicit object ClockFormat extends RootJsonFormat[VectorClock] {
-    override def write(obj: VectorClock): JsValue = obj.versions.toJson;
+    override def write(obj: VectorClock): JsValue = obj.versions.toJson
     override def read(json: JsValue): VectorClock = new VectorClock(json.convertTo[TreeMap[String, Long]])
   }
 

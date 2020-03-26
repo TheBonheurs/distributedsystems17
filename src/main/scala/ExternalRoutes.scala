@@ -7,8 +7,8 @@ import akka.util.Timeout
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class ExternalRoutes(buildValueRepository: ActorRef[ValueRepository.Command])(implicit system: ActorSystem[_]) extends JsonSupport {
-
+class ExternalRoutes(buildValueRepository: ActorRef[ValueRepository.Command])(implicit system: ActorSystem[_]) {
+  import JsonSupport._
   import akka.actor.typed.scaladsl.AskPattern._
 
   // asking someone requires a timeout and a scheduler, if the timeout hits without response
