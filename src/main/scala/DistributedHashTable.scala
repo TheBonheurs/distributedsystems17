@@ -3,8 +3,6 @@ import java.security.MessageDigest
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
 
-import scala.collection.mutable
-
 object DistributedHashTable {
 
   sealed trait Response
@@ -45,31 +43,6 @@ object DistributedHashTable {
         replyTo ! taken
       }
       Behaviors.same
-  }
-
-  private val ring: mutable.ListBuffer[RingNode] = scala.collection.mutable.ListBuffer.empty[RingNode]
-
-  // Add a node to the ring
-  def addNode(ringnode: RingNode): Boolean = {
-    ring.addOne(ringnode)
-    true
-  }
-
-  // Add multiple nodes at once
-  def addNodes(seq: Seq[RingNode]): Boolean = {
-    ring.addAll(seq)
-    true
-  }
-
-  // Clear the ring
-  def resetRing: Boolean = {
-    ring.clear()
-    true
-  }
-
-  // Getter for ring
-  def getRing: List[RingNode] = {
-    ring.sortBy((node: RingNode) => node.position).toList
   }
 
   // Get the MD5 hash of a key as a BigInt
