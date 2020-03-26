@@ -1,4 +1,4 @@
-import ValueRepository.{OK, Value}
+import ValueRepository.{KO, OK, Value}
 import akka.actor
 import akka.actor.testkit.typed.scaladsl.ActorTestKit
 import akka.actor.typed.scaladsl.Behaviors
@@ -65,6 +65,24 @@ class HttpSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with Sca
 
       Delete("/values/myKey") ~> routes ~> check {
         status shouldEqual StatusCodes.OK
+
+        probe.expectMessageType[ValueRepository.RemoveValue]
+      }
+    }
+
+    "return an error when deleting a non-existent item" in {
+      val mockedBehavior = Behaviors.receiveMessage[ValueRepository.Command] {
+        case ValueRepository.RemoveValue("myKey", replyTo) =>
+          replyTo ! KO("Not found")
+          Behaviors.same
+      }
+      val probe = testKit.createTestProbe[ValueRepository.Command]()
+      val mockedPublisher = testKit.spawn(Behaviors.monitor(probe.ref, mockedBehavior))
+
+      val routes = new ExternalRoutes(mockedPublisher).theValueRoutes
+
+      Delete("/values/myKey") ~> routes ~> check {
+        status shouldEqual StatusCodes.InternalServerError
 
         probe.expectMessageType[ValueRepository.RemoveValue]
       }
