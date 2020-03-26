@@ -1,3 +1,4 @@
+
 import java.util.concurrent.TimeoutException
 
 import akka.actor
@@ -7,12 +8,13 @@ import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import akka.cluster.VectorClock
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.Http.ServerBinding
-import akka.http.scaladsl.model.{HttpRequest, HttpResponse, Uri}
-import akka.http.scaladsl.unmarshalling.{ Unmarshal, Unmarshaller }
+import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpMethods, HttpRequest, HttpResponse, StatusCodes, Uri}
+import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
 import akka.stream.Materializer
 import spray.json._
 import DefaultJsonProtocol._
 
+import scala.collection.mutable
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -65,6 +67,26 @@ object InternalClient {
 
 final case class Value(key: String, value: String, version: VectorClock)
 
+implicit object VectorFormat extends RootJsonFormat[VectorClock]{
+
+  def write(vc: VectorClock) = JsObject(
+    List(
+      Some("versions" -> vc.versions ),
+    ).flatten: _*
+  )
+
+  def read(json: JsValue) = {
+    val jsObject = json.asJsObject
+
+    jsObject.getFields("versions") match {
+      case Seq(versions) => VectorClock(
+        versions.convertTo[mutable.TreeMap[Node, Long]
+      )
+    }
+  }
+
+}
+
 implicit val valueFormat = jsonFormat3(Value)
 
 class InternalClient(context: ActorContext[InternalClient.Command], valueRepository: ActorRef[ValueRepository.Command], host: String, port: Int)
@@ -82,7 +104,8 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
 
   val N = 3;
   val R = N-1;
-  //val responseFuture: Future[HttpResponse] = sendToOtherNodes()
+  val W = N;
+
   val hosts = Map()
 
 
@@ -96,7 +119,7 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
 
     // Use DHT to get top N nodes
     for (x <- DHT.getTopNPreferenceNodes(DHT.getHash(key), N) ) {
-      futures + sendToOtherNodes(key, hosts.get(x.address))
+      futures + getOtherNodes(key, hosts.get(x.address))
     }
     val responses = Future.sequence(futures.map(_.transform(Success(_))))
 
@@ -118,12 +141,23 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
 
   }
 
-  def write (v: Value): Unit = {
+  def write (v: Value): Boolean = {
+    val futures = List.empty[Future[HttpResponse]]
 
-  }
+    // Use DHT to get top N nodes
+    for (x <- DHT.getTopNPreferenceNodes(DHT.getHash(v.key), N) ) {
+      futures + putOtherNodes(v.key, hosts.get(x.address))
+    }
 
-  def put (v: Value): Unit = {
-
+    var counter = 0
+    futures.foreach(_.map{
+      case response: HttpResponse @ HttpResponse(StatusCodes.OK, _, _, _) =>
+        counter += 1
+    })
+    if (counter < W-1) {
+      return false
+    }
+    true
   }
 
   /**
@@ -132,9 +166,24 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
    * @param address address of the server
    * @return Http Response
    */
-  def sendToOtherNodes(key: String, address : Uri): Future[HttpResponse] = {
+  def getOtherNodes(key: String, address : Uri): Future[HttpResponse] = {
     Http().singleRequest(
       HttpRequest(uri = address + "/" + key))
+  }
+
+  /**
+   *
+   * @param v value to write
+   * @param address address of the server
+   * @return
+   */
+  def putOtherNodes(v: Value, address : Uri): Future[HttpResponse] = {
+    Http().singleRequest(HttpRequest(
+      method = HttpMethods.POST,
+      uri = address + "/write",
+      entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, v.toJson)
+      )
+    )
   }
 
   /**
@@ -143,13 +192,13 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
    * @return value with the largest vectorclock
    */
   def checkVersion(values: List[Value]): Value = {
-    match values.maxBy(Value => Value.version) {
-      // case l: List[Value] =>
-      case Value(a,b,c) => Value(a,b,c)
-      case List.empty => throw RuntimeException // add msg
+    var result = values.head
+    for( a <- values; b <- values) {
+      if (a.version.>(b.version) && result.version.<(a.version)) {
+        result = a
+      }
     }
-
-
+    result
   }
 
   /*override def onMessage(msg: InternalClient.Command): Behavior[InternalClient.Command] = {
@@ -161,3 +210,4 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
 
 
 }
+

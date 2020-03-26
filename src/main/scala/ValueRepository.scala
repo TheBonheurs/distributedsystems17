@@ -5,12 +5,10 @@ import akka.cluster.VectorClock
 import scala.collection.immutable.TreeMap
 import scala.collection.mutable
 
-
+// Definition of a build job and its possible status values
 object ValueRepository {
 
-  // Definition of a build job and its possible status values
 
-  sealed trait Status
   object Successful extends Status
   object Failed extends Status
 
