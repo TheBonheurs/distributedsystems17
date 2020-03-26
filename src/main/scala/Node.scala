@@ -21,6 +21,10 @@ object Node {
   def apply(config: NodeConfig, allNodes: List[NodeConfig]): Behavior[Message] = Behaviors.setup { ctx =>
     ctx.log.info("Starting node {}", config.name)
 
+    for (node <- allNodes) {
+      DHT.addNode(RingNode(node.index, node.internalHost, node.internalPort))
+    }
+
     val buildValueRepository = ctx.spawn(ValueRepository(config.name), "ValueRepository")
 
     val internalServer = ctx.spawn(InternalServer(buildValueRepository, config.internalHost, config.internalPort), "InternalServer")
