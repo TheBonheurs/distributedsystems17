@@ -18,13 +18,5 @@ object main {
     for (node <- nodes) {
       ActorSystem(Node(node, nodes), node.name)
     }
-
-    val testCLient = InternalClient
-    ActorSystem(Node, "d")
-
-    testCLient.Init("localhost", 9001, 3, 2, 3)
-    testCLient.Put(ValueRepository.Value("a", "b"))
-
-    testCLient.Get("a")
   }
 }
