@@ -29,16 +29,20 @@ class DistributedHashTableTest extends AnyFlatSpec with Matchers with BeforeAndA
   "add node" should "add a node to the ring" in {
     val node1 = RingNode(BigInt(1), "localhost", 8000)
 
-    val dht = testKit.spawn(DistributedHashTable(List(node1)))
+    val ring = DistributedHashTable.createRing(List(node1))
+
+    val dht = testKit.spawn(DistributedHashTable(ring, 1))
 
     val node2 = RingNode(BigInt(10), "localhost", 8001)
 
     result(dht.ask(AddNode(node2, _: ActorRef[Response])), 1.second) should be(OK)
 
-    val ring = result(dht.ask(GetRing(_: ActorRef[List[RingNode]])), 1.second)
+    val dhtRing = result(dht.ask(GetRing(_: ActorRef[LazyList[RingNode]])), 1.second)
 
-    ring.head should be(node1)
-    ring(1) should be(node2)
+    dhtRing.take(3) should be (List(node1, node2, node1))
+
+    dhtRing.head should be(node1)
+    dhtRing(1) should be(node2)
   }
 
   "nodes" should "be ordered" in {
@@ -54,9 +58,23 @@ class DistributedHashTableTest extends AnyFlatSpec with Matchers with BeforeAndA
     result(dht.ask(AddNode(node3, _: ActorRef[Response])), 1.second)
     result(dht.ask(AddNode(node2, _: ActorRef[Response])), 1.second)
 
-    val list = result(dht.ask(GetRing(_: ActorRef[List[RingNode]])), 1.second)
+    val list = result(dht.ask(GetRing(_: ActorRef[LazyList[RingNode]])), 1.second)
 
-    list should be(List(node1, node2, node3, node4))
+    list.take(4) should be(List(node1, node2, node3, node4))
+  }
+
+  "nodes" should "be circular" in {
+    val node1 = RingNode(BigInt(1), "localhost", 8000)
+    val node2 = RingNode(BigInt(2), "localhost", 8000)
+    val node3 = RingNode(BigInt(3), "localhost", 8000)
+
+    val ring = DistributedHashTable.createRing(List(node1, node2, node3))
+
+    val dht = testKit.spawn(DistributedHashTable(ring, 3))
+
+    val list = result(dht.ask(GetRing(_: ActorRef[LazyList[RingNode]])), 1.second)
+
+    list.take(5) should be(List(node1, node2, node3, node1, node2))
   }
 
   "preference list" should "return top N nodes" in {
@@ -66,9 +84,11 @@ class DistributedHashTableTest extends AnyFlatSpec with Matchers with BeforeAndA
     val node4 = RingNode(BigInt(300), "localhost", 8003)
     val node5 = RingNode(BigInt(400), "localhost", 8004)
 
-    val dht = testKit.spawn(DistributedHashTable(List(node1, node2, node3, node4, node5)))
+    val ring = DistributedHashTable.createRing(List(node1, node2, node3, node4, node5))
 
-    val list = result(dht.ask(GetTopN(150, 3, _: ActorRef[List[RingNode]])), 1.second)
+    val dht = testKit.spawn(DistributedHashTable(ring, 5))
+
+    val list = result(dht.ask(GetTopN(150, 3, _: ActorRef[LazyList[RingNode]])), 1.second)
     list should be(List(node3, node4, node5))
   }
 
@@ -79,9 +99,11 @@ class DistributedHashTableTest extends AnyFlatSpec with Matchers with BeforeAndA
     val node4 = RingNode(BigInt(300), "localhost", 8003)
     val node5 = RingNode(BigInt(400), "localhost", 8004)
 
-    val dht = testKit.spawn(DistributedHashTable(List(node1, node2, node3, node4, node5)))
+    val ring = DistributedHashTable.createRing(List(node1, node2, node3, node4, node5))
 
-    val list = result(dht.ask(GetTopN(250, 4, _: ActorRef[List[RingNode]])), 1.second)
+    val dht = testKit.spawn(DistributedHashTable(ring, 5))
+
+    val list = result(dht.ask(GetTopN(250, 4, _: ActorRef[LazyList[RingNode]])), 1.second)
     list should be(List(node4, node5, node1, node2))
   }
 }

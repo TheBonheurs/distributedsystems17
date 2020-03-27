@@ -3,8 +3,9 @@ import java.security.MessageDigest
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
 
-object DistributedHashTable {
+import scala.collection.immutable.LinearSeq
 
+object DistributedHashTable {
   sealed trait Response
 
   final case object OK extends Response
@@ -16,33 +17,37 @@ object DistributedHashTable {
 
   final case class ResetRing(replyTo: ActorRef[Response]) extends Command
 
-  final case class GetRing(replyTo: ActorRef[List[RingNode]]) extends Command
+  final case class GetRing(replyTo: ActorRef[LazyList[RingNode]]) extends Command
 
-  final case class GetTopN(hash: BigInt, n: Int, replyTo: ActorRef[List[RingNode]]) extends Command
+  final case class GetTopN(hash: BigInt, n: Int, replyTo: ActorRef[LazyList[RingNode]]) extends Command
 
   implicit val order: Ordering[RingNode] = Ordering.by(node => node.position)
 
-  def apply(ring: List[RingNode] = List.empty): Behavior[Command] = Behaviors.receiveMessage {
+  /**
+   * Be careful, the ring is infinite
+   *
+   * @param ring An ordered (by position) stream which loops around itself
+   * @param size The size of the ring
+   * @return self
+   */
+  def apply(ring: LazyList[RingNode] = LazyList.empty, size: Int = 0): Behavior[Command] = Behaviors.receiveMessage {
     case AddNode(ringNode, replyTo) =>
       replyTo ! OK
-      DistributedHashTable((ringNode :: ring).sorted)
+      DistributedHashTable(createRing((ringNode +: ring.take(size)).sorted), size + 1)
     case ResetRing(replyTo) =>
       replyTo ! OK
-      DistributedHashTable(List.empty)
+      DistributedHashTable()
     case GetRing(replyTo) =>
       replyTo ! ring
       Behaviors.same
-
     case GetTopN(hash, n, replyTo) =>
-      val toEnd = ring.filter(r => r.position > hash).sortBy((node: RingNode) => node.position)
-      val taken = toEnd.take(n)
-      // If needed, wrap around the ring
-      if (taken.length < n) {
-        replyTo ! taken ::: ring.sortBy((node: RingNode) => node.position).take(n - taken.length)
-      } else {
-        replyTo ! taken
-      }
+      replyTo ! ring.dropWhile(r => r.position <= hash).take(n)
       Behaviors.same
+  }
+
+  def createRing[A](values: LinearSeq[A]): LazyList[A] = {
+    lazy val ring: LazyList[A] = LazyList.from(values) #::: ring
+    ring
   }
 
   // Get the MD5 hash of a key as a BigInt
