@@ -1,32 +1,26 @@
 import java.net.http.HttpClient
 
 import akka.actor
-import akka.actor.ActorSystem
+import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.actor.testkit.typed.scaladsl.ActorTestKit
-import akka.actor.typed.ActorSystem
+import akka.actor.typed.scaladsl.Behaviors
 import akka.http.scaladsl.model.{HttpEntity, HttpRequest, HttpResponse}
+import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.testkit.TestKit
 import akka.util.ByteString
+import akka.actor.typed.scaladsl.adapter._
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.{BeforeAndAfterAll, MustMatchers, WordSpecLike}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class InternalClientSpec extends TestKit(ActorSystem(classic.))
-  with MockFactory
-  with ScalaFutures
-  with BeforeAndAfterAll {
+class InternalClientSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with ScalatestRouteTest {
 
-  trait MockClientHandler extends HttpClient {
-    val mock = mockFunction[HttpRequest, Future[HttpResponse]]
-
-    override def sendRequest(httpRequest: HttpRequest)(implicit actorSystem: ActorSystem): Future[HttpResponse] =
-      mock(httpRequest)
-  }
-
-  val stripString =
-    """ """.stripMargin
+  import JsonSupport._
 
   lazy val testKit: ActorTestKit = ActorTestKit()
 
@@ -34,16 +28,18 @@ class InternalClientSpec extends TestKit(ActorSystem(classic.))
 
   override def createActorSystem(): actor.ActorSystem = testKit.system.toClassic
 
+  val valueRepository: ActorRef[ValueRepository.Command] = testKit.spawn(ValueRepository(""))
+  lazy val routes: Route = new ExternalRoutes(valueRepository).theValueRoutes
 
-    // mock Http
-    val internalClient = new InternalClient() with MockClientHandler {
-      override implicit def actorSystem: ActorSystem = system
-      override implicit def executionContext: ExecutionContext = ExecutionContext.Implicits.global
+
+  "Get an item" in {
+    val mockedBehavior = {
+
     }
+  }
 
-    internalClient.mock
-      .expects(HttpRequest(uri = "http://dummy.restapiexample.com/api/v1/employees"))
-      .returning(Future.successful(HttpResponse(entity = HttpEntity(ByteString(stripString)))))
+  val probe = testKit.createTestProbe()
+  val mockedPublisher = testKit.spawn()
 
-    val expectResult = {}
+
 }
