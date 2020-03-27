@@ -2,16 +2,17 @@ import akka.actor.typed.ActorSystem
 
 
 object main {
-  case class NodeConfig(index: Int, name: String, externalHost: String, externalPort: Int, internalHost: String, internalPort: Int)
+  case class NodeConfig(position: BigInt, name: String, externalHost: String, externalPort: Int, internalHost: String, internalPort: Int)
 
   def main(args: Array[String]): Unit = {
 
     // name, node (external), port (external), host (internal), port (internal)
+    // max range of MD5 is 2^128=340282366920938463463374607431768211456
     val nodes = List(
-      NodeConfig(0, "node1", "localhost", 8001, "localhost", 9001),
-      NodeConfig(1, "node2", "localhost", 8002, "localhost", 9002),
-      NodeConfig(2, "node3", "localhost", 8003, "localhost", 9003),
-      NodeConfig(3, "node4", "localhost", 8004, "localhost", 9004),
+      NodeConfig(BigInt("0"), "node1", "localhost", 8001, "localhost", 9001),
+      NodeConfig(BigInt("85070591730234615865843651857942052864"), "node2", "localhost", 8002, "localhost", 9002),
+      NodeConfig(BigInt("170141183460469231731687303715884105728"), "node3", "localhost", 8003, "localhost", 9003),
+      NodeConfig(BigInt("255211775190703847597530955573826158592"), "node4", "localhost", 8004, "localhost", 9004),
     )
 
     for (node <- nodes) {
