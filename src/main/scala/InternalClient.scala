@@ -12,7 +12,7 @@ import akka.stream.Materializer
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.util.Success
+import scala.util.{Failure, Success, Try}
 
 object InternalClient {
   def apply(valueRepository: ActorRef[ValueRepository.Command], host: String, port: Int): Behavior[Command] =
@@ -21,6 +21,7 @@ object InternalClient {
   sealed trait Command
   final case class Put(value: ValueRepository.Value) extends Command
   final case class Get(key: String) extends  Command
+
 }
 
 
@@ -38,72 +39,97 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
 
   var started = false
 
-  val N = 3;
-  val R = N - 1;
-  val W = N;
+  val N: Int = 3
+  val R: Int = N - 1
+  val W: Int = N
 
+  /**
+   * Helper method for converting futures to future try
+   * See: https://stackoverflow.com/questions/20874186/scala-listfuture-to-futurelist-disregarding-failed-futures/20874404#20874404
+   *
+   * @param f Future to convert
+   * @tparam T Type of the future
+   * @return Future of type Try of type T
+   */
+  def futureToFutureTry[T](f: Future[T]): Future[Try[T]] =
+    f.map(Success(_)).recover(x => Failure(x))
 
   /**
    * Method executed with get() operation
+   *
    * @param key the key to get
    * @return the value of that key
    */
-  def read(key: String): ValueRepository.Value = {
-    val futures: List[Future[HttpResponse]] = List.empty[Future[HttpResponse]]
+  def read(key: String): Future[ValueRepository.Value] = {
+    // TODO read from this node
 
+    val futures: List[Future[HttpResponse]] = List.empty[Future[HttpResponse]]
     // Use DHT to get top N nodes
     for (x <- DHT.getTopNPreferenceNodes(DHT.getHash(key), N)) {
-      futures :+ getOtherNodes(key, Uri.from(scheme = "http", host = x.host, port = x.port, path = "/"))
+      futures :+ getOtherNodes(key, Uri.from(scheme = "http", host = x.host, port = x.port, path = "/internal"))
     }
-    val responses = Future.sequence(futures.map(_.transform(Success(_))))
+    // Convert to Future[Try[T]] to catch exceptions in the Future.sequence line
+    val listOfFutureTrys = futures.map(futureToFutureTry)
+    // Convert to Future[List[Try[HttpResponse]]]
+    val responsesFuture = Future.sequence(listOfFutureTrys)
 
-    // get only the successful ones
-    val successes = responses.map(_.collect { case Success(x) => x })
+    // Get only the successful responses
+    val successesFuture = responsesFuture.map(_.filter(_.isSuccess))
+    val failuresFuture = responsesFuture.map(_.filter(_.isFailure))
 
-    if (successes.isCompleted) {
-      if (successes.value.size < R) {
-        throw TimeoutException //add msg
+    // Remove the Try from Future[List[Try[HttpResponse]]]
+    val successResponsesFuture = successesFuture.map(f => f.map(t => t.get))
+    val valueFuture = successResponsesFuture.map(l => {
+      if (l.size < R - 1) {
+       throw new TimeoutException("Did not get R - 1 successfull reads from other nodes")
       } else {
         val values = List.empty[ValueRepository.Value]
-
-        for (y <- successes.value.map(_.toOption)) {
-          for (z <- y.get) {
-            values :+ Unmarshal(z).to[ValueRepository.Value]
-          }
+        // For all responses
+        for (y <- l) {
+          values :+ Unmarshal(y).to[ValueRepository.Value]
         }
-        return checkVersion(values)
+        checkVersion(values)
       }
-    } else return null // moet echt iets beters voor verzinnen straks
-
+    })
+    valueFuture
   }
 
   /**
-   *
-   * @param v
-   * @return
+   * Write value to other nodes
+   * @param v value to write
+   * @return True if written to W - 1 other nodes successfully, false otherwise
    */
-  def write(v: ValueRepository.Value): Boolean = {
-    val futures: List[Future[HttpResponse]] = List.empty
+  def write(v: ValueRepository.Value): Future[Boolean] = {
+    // TODO write to this node
 
+    val futures: List[Future[HttpResponse]] = List.empty
     // Use DHT to get top N nodes
     for (x <- DHT.getTopNPreferenceNodes(DHT.getHash(v.key), N)) {
-      futures:+(putOtherNodes(v, Uri.from(scheme = "http", host = x.host, port = x.port, path = "/")))
+      futures :+ putOtherNodes(v, Uri.from(scheme = "http", host = x.host, port = x.port, path = "/internal"))
     }
+    // Convert to Future[Try[T]] to catch exceptions in the Future.sequence line
+    val listOfFutureTrys = futures.map(futureToFutureTry)
+    // Convert to Future[List[Try[HttpResponse]]]
+    val responsesFuture = Future.sequence(listOfFutureTrys)
 
-    var counter = 0
-    futures.foreach(_.map {
-      case response: HttpResponse@HttpResponse(StatusCodes.OK, _, _, _) =>
-        counter += 1
+    // Get only the successful responses
+    val successesFuture = responsesFuture.map(_.filter(_.isSuccess))
+    val failuresFuture = responsesFuture.map(_.filter(_.isFailure))
+
+    // Remove the Try from Future[List[Try[HttpResponse]]]
+    val successResponsesFuture = successesFuture.map(f => f.map(t => t.get))
+    val booleanFuture = successResponsesFuture.map(l => {
+      if (l.size < W - 1) {
+        false
+      } else {
+        true
+      }
     })
-    if (counter < W - 1) {
-      return false
-    }
-    true
+    booleanFuture
   }
 
   /**
    * Send get request to server
-   *
    * @param key     key of the value to get
    * @param address address of the server
    * @return Http Response
