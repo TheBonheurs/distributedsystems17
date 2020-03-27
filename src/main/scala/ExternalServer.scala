@@ -10,8 +10,8 @@ import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
 object ExternalServer {
-  def apply(valueRepository: ActorRef[ValueRepository.Command], host: String, port: Int): Behavior[Command] =
-    Behaviors.setup(context => new ExternalServer(context, valueRepository, host, port))
+  def apply(valueRepository: ActorRef[ValueRepository.Command], internalClient: ActorRef[InternalClient.Command], host: String, port: Int): Behavior[Command] =
+    Behaviors.setup(context => new ExternalServer(context, valueRepository, internalClient, host, port))
 
   sealed trait Command
   final case class Started(binding: ServerBinding) extends Command
@@ -19,7 +19,7 @@ object ExternalServer {
   final case class Stop() extends  Command
 }
 
-class ExternalServer(context: ActorContext[ExternalServer.Command], valueRepository: ActorRef[ValueRepository.Command], host: String, port: Int)
+class ExternalServer(context: ActorContext[ExternalServer.Command], valueRepository: ActorRef[ValueRepository.Command], internalClient: ActorRef[InternalClient.Command], host: String, port: Int)
   extends AbstractBehavior[ExternalServer.Command](context) {
 
   import ExternalServer._
@@ -28,7 +28,7 @@ class ExternalServer(context: ActorContext[ExternalServer.Command], valueReposit
   implicit val classicActorSystem: ActorSystem = context.system.toClassic;
   implicit val materializer: Materializer = Materializer(classicActorSystem)
 
-  val routes = new ExternalRoutes(valueRepository)
+  val routes = new ExternalRoutes(valueRepository, internalClient)
 
   var started = false;
   var binding: ServerBinding = _;
