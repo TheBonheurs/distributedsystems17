@@ -9,8 +9,6 @@ import scala.concurrent.duration._
 
 object Node {
 
-  import akka.actor.typed.scaladsl.AskPattern._
-
   sealed trait Message
 
   private final case class StartFailed(cause: Throwable) extends Message
@@ -34,7 +32,7 @@ object Node {
     val dht = ctx.spawn(DistributedHashTable(), "DistributedHashTable")
 
     for (node <- allNodes) {
-      dht.ask(AddNode(RingNode(node.index, node.internalHost, node.internalPort), _: ActorRef[Response]));
+      dht ! AddNode(RingNode(node.index, node.internalHost, node.internalPort), ctx.system.ignoreRef[Response])
     }
 
     val buildValueRepository = ctx.spawn(ValueRepository(config.name), "ValueRepository")

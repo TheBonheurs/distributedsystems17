@@ -4,7 +4,7 @@ version := "0.1"
 
 scalaVersion := "2.13.1"
 
-val akkaVersion = "2.6.3"
+val akkaVersion = "2.6.4"
 
 libraryDependencies += "com.typesafe.akka" %% "akka-stream-typed" % akkaVersion
 libraryDependencies += "com.typesafe.akka" %% "akka-http" % "10.1.11"
