@@ -32,7 +32,7 @@ object Node {
     val dht = ctx.spawn(DistributedHashTable(), "DistributedHashTable")
 
     for (node <- allNodes) {
-      dht ! AddNode(RingNode(node.index, node.internalHost, node.internalPort), ctx.system.ignoreRef[Response])
+      dht ! AddNode(RingNode(node.position, node.internalHost, node.internalPort), ctx.system.ignoreRef[Response])
     }
 
     val buildValueRepository = ctx.spawn(ValueRepository(config.name), "ValueRepository")
