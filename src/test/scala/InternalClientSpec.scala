@@ -38,9 +38,9 @@ class InternalClientSpec extends AnyWordSpec with BeforeAndAfterAll with Matcher
     }
 
     val probe = testKit.createTestProbe()
-    val mockedPublisher = testKit.spawn()
+    //val mockedPublisher = testKit.spawn()
 
-    Get("a") ~> r
+    Get("a")
   }
 
 

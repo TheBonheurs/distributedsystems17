@@ -1,6 +1,6 @@
 import java.util.concurrent.TimeoutException
 
-import InternalClient.{Get, Init, Put}
+import InternalClient.{Get, Init, KO, OK, Put}
 import akka.actor
 import akka.actor.typed.scaladsl.adapter._
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
@@ -18,10 +18,18 @@ object InternalClient {
   def apply(valueRepository: ActorRef[ValueRepository.Command], host: String, port: Int): Behavior[Command] =
     Behaviors.setup(context => new InternalClient(context, valueRepository, host, port))
 
+  // Trait defining responses
+  sealed trait Response
+
+  case object Value extends Response
+  case object OK extends Response
+  case object KO extends Response
+
   sealed trait Command
-  final case class Put(value: ValueRepository.Value) extends Command
-  final case class Get(key: String) extends  Command
+  final case class Put(value: ValueRepository.Value, replyTo: ActorRef[Response]) extends Command
+  final case class Get(key: String, replyTo: ActorRef[Option[ValueRepository.Value]]) extends  Command
   final case class Init(host:String, port:Int, n:Int, r:Int, w:Int) extends Command
+  final case class Result(res:Future[Any]) extends Command
 }
 
 
@@ -37,7 +45,7 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
 
   val routes = new ExternalRoutes(valueRepository)
   // TODO make sure to initialize self with proper host + port
-  var self: Uri = Uri.from(scheme = "http", host ="localhost", port = 8001, path = "/internal")
+  var self: Uri = Uri.from(scheme = "http", host ="localhost", port = 9001, path = "/internal")
 
   var N: Int = 3
   var R: Int = N - 1
@@ -187,12 +195,14 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
 
   override def onMessage(msg: InternalClient.Command): Behavior[InternalClient.Command] = {
     msg match {
-      case Put(value) => write(value)
-        Behaviors.same
-      case Get(key) => read(key)
-        Behaviors.same
+      case Put(value, replyTo) =>
+        if (write(value).value.get.get) replyTo ! OK else replyTo ! KO
+        this
+      case Get(key, replyTo) =>
+        //replyTo ! read(key)
+        this
       case Init(h, p, n, r, w) => initParams(h, p, n, r, w)
-        Behaviors.same
+        this
     }
   }
 }
