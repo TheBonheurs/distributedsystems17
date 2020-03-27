@@ -214,10 +214,16 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
   override def onMessage(msg: InternalClient.Command): Behavior[InternalClient.Command] = {
     msg match {
       case Put(value, replyTo) =>
-        if (write(value).value.get.get) replyTo ! OK else replyTo ! KO
+        val putFuture = write(value)
+        putFuture.map(putRes => {
+          if (putRes) replyTo ! OK else replyTo ! KO
+        })
         this
       case Get(key, replyTo) =>
-        replyTo ! ValueRes(read(key).value.get.get)
+        val f = read(key)
+        f.map(valRes => {
+          replyTo ! ValueRes(valRes)
+        })
         Behaviors.same
       case Init(h, p, n, r, w) => initParams(h, p, n, r, w)
         this
