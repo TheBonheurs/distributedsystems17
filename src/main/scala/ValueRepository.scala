@@ -1,9 +1,12 @@
+import akka.actor.Status.Status
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.cluster.VectorClock
 
 import scala.collection.immutable.TreeMap
 
+
+// Definition of a build job and its possible status values
 object ValueRepository {
 
   final case class Value(key: String, value: String, version: VectorClock = new VectorClock())

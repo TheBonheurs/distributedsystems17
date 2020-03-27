@@ -22,7 +22,10 @@ class HttpSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with Sca
   override def createActorSystem(): actor.ActorSystem = testKit.system.toClassic
 
   val valueRepository: ActorRef[ValueRepository.Command] = testKit.spawn(ValueRepository(""))
-  lazy val routes: Route = new ExternalRoutes(valueRepository).theValueRoutes
+  val dht: ActorRef[DistributedHashTable.Command] = testKit.spawn(DistributedHashTable())
+  val internalClient: ActorRef[InternalClient.Command] = testKit.spawn(InternalClient(valueRepository, dht, "", 0, 4, 3, 2))
+
+  lazy val routes: Route = new ExternalRoutes(valueRepository, internalClient).theValueRoutes
 
   "The service" should {
     "return a 404 when item does not exist" in {
@@ -32,21 +35,31 @@ class HttpSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with Sca
     }
 
     "create an item" in {
+      val value = Value("myKey", "myVal", new VectorClock())
+      val mockedBehavior = Behaviors.receiveMessage[InternalClient.Command] {
+        case InternalClient.Put(value, replyTo) =>
+          replyTo ! InternalClient.OK
+          Behaviors.same
+      }
+      val valueRepository = testKit.spawn(ValueRepository(""))
+      val internalProbe = testKit.createTestProbe[InternalClient.Command]()
+      val mocketInternalClient = testKit.spawn(Behaviors.monitor(internalProbe.ref, mockedBehavior))
+      val routes = new ExternalRoutes(valueRepository, mocketInternalClient).theValueRoutes
       Post("/values", Value("myKey", "myVal", new VectorClock())) ~> routes ~> check {
         responseAs[String] shouldEqual "Value added"
       }
     }
 
     "retrieve created item" in {
-      val mockedBehavior = Behaviors.receiveMessage[ValueRepository.Command] {
-        case ValueRepository.GetValueByKey("myKey", replyTo) =>
-          replyTo ! Option(Value("myKey", "myValue", new VectorClock()))
+      val mockedBehavior = Behaviors.receiveMessage[InternalClient.Command] {
+        case InternalClient.Get("myKey", replyTo) =>
+          replyTo ! InternalClient.ValueRes(Value("myKey", "myValue", new VectorClock()))
           Behaviors.same
       }
-      val probe = testKit.createTestProbe[ValueRepository.Command]()
-      val mockedPublisher = testKit.spawn(Behaviors.monitor(probe.ref, mockedBehavior))
-
-      val routes = new ExternalRoutes(mockedPublisher).theValueRoutes
+      val valueRepository = testKit.spawn(ValueRepository(""))
+      val internalProbe = testKit.createTestProbe[InternalClient.Command]()
+      val mocketInternalClient = testKit.spawn(Behaviors.monitor(internalProbe.ref, mockedBehavior))
+      val routes = new ExternalRoutes(valueRepository, mocketInternalClient).theValueRoutes
 
       Get("/values/myKey") ~> routes ~> check {
         status shouldEqual StatusCodes.OK
@@ -61,8 +74,10 @@ class HttpSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with Sca
       }
       val probe = testKit.createTestProbe[ValueRepository.Command]()
       val mockedPublisher = testKit.spawn(Behaviors.monitor(probe.ref, mockedBehavior))
+      val dht = testKit.spawn(DistributedHashTable())
 
-      val routes = new ExternalRoutes(mockedPublisher).theValueRoutes
+      val internalClient = testKit.spawn(InternalClient(valueRepository, dht, "", 0, 4, 2, 1))
+      val routes = new ExternalRoutes(mockedPublisher, internalClient).theValueRoutes
 
       Delete("/values/myKey") ~> routes ~> check {
         status shouldEqual StatusCodes.OK
@@ -79,8 +94,11 @@ class HttpSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with Sca
       }
       val probe = testKit.createTestProbe[ValueRepository.Command]()
       val mockedPublisher = testKit.spawn(Behaviors.monitor(probe.ref, mockedBehavior))
+      val dht = testKit.spawn(DistributedHashTable())
 
-      val routes = new ExternalRoutes(mockedPublisher).theValueRoutes
+      val internalClient = testKit.spawn(InternalClient(valueRepository, dht, "", 0, 4, 2, 1))
+
+      val routes = new ExternalRoutes(mockedPublisher, internalClient).theValueRoutes
 
       Delete("/values/myKey") ~> routes ~> check {
         status shouldEqual StatusCodes.InternalServerError
