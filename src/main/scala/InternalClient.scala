@@ -136,7 +136,7 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
    */
   def getOtherNodes(key: String, address: Uri): Future[HttpResponse] = {
     Http().singleRequest(
-      HttpRequest(uri = address + "/" + key))
+      HttpRequest(uri = address + "/internal/" + key))
   }
 
   /**
@@ -148,7 +148,7 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
   def putOtherNodes(v: ValueRepository.Value, address: Uri): Future[HttpResponse] = {
     Http().singleRequest(HttpRequest(
       method = HttpMethods.POST,
-      uri = address + "/write",
+      uri = address + "/internal",
       entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, v.toJson.prettyPrint)
     )
     )
