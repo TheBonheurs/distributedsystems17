@@ -36,8 +36,8 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
   implicit val materializer: Materializer = Materializer(classicActorSystem)
 
   val routes = new ExternalRoutes(valueRepository)
-
-  var started = false
+  // TODO make sure to initialize self with proper host + port
+  var self: Uri = Uri.from(scheme = "http", host ="localhost", port = 8001, path = "/internal")
 
   val N: Int = 3
   val R: Int = N - 1
@@ -61,9 +61,9 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
    * @return the value of that key
    */
   def read(key: String): Future[ValueRepository.Value] = {
-    // TODO read from this node
+    // add to it's own server
+    val futures: List[Future[HttpResponse]] = List(getOtherNodes(key, self))
 
-    val futures: List[Future[HttpResponse]] = List.empty[Future[HttpResponse]]
     // Use DHT to get top N nodes
     for (x <- DHT.getTopNPreferenceNodes(DHT.getHash(key), N)) {
       futures :+ getOtherNodes(key, Uri.from(scheme = "http", host = x.host, port = x.port, path = "/internal"))
@@ -100,9 +100,9 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
    * @return True if written to W - 1 other nodes successfully, false otherwise
    */
   def write(v: ValueRepository.Value): Future[Boolean] = {
-    // TODO write to this node
+    // add to it's own server
+    val futures: List[Future[HttpResponse]] = List(putOtherNodes(v, self))
 
-    val futures: List[Future[HttpResponse]] = List.empty
     // Use DHT to get top N nodes
     for (x <- DHT.getTopNPreferenceNodes(DHT.getHash(v.key), N)) {
       futures :+ putOtherNodes(v, Uri.from(scheme = "http", host = x.host, port = x.port, path = "/internal"))
@@ -136,7 +136,7 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
    */
   def getOtherNodes(key: String, address: Uri): Future[HttpResponse] = {
     Http().singleRequest(
-      HttpRequest(uri = address + "/internal/" + key))
+      HttpRequest(uri = address + key))
   }
 
   /**
@@ -148,8 +148,8 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
   def putOtherNodes(v: ValueRepository.Value, address: Uri): Future[HttpResponse] = {
     Http().singleRequest(HttpRequest(
       method = HttpMethods.POST,
-      uri = address + "/internal",
-      entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, v.toJson.prettyPrint)
+      uri = address,
+      entity = HttpEntity(ContentTypes.`application/json`, v.toJson.prettyPrint)
     )
     )
   }
