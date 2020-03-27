@@ -22,7 +22,9 @@ class HttpSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with Sca
   override def createActorSystem(): actor.ActorSystem = testKit.system.toClassic
 
   val valueRepository: ActorRef[ValueRepository.Command] = testKit.spawn(ValueRepository(""))
-  lazy val routes: Route = new ExternalRoutes(valueRepository).theValueRoutes
+  val dht: ActorRef[DistributedHashTable.Command] = testKit.spawn(DistributedHashTable())
+  val internalClient: ActorRef[InternalClient.Command] = testKit.spawn(InternalClient(valueRepository, dht, "", 0))
+  lazy val routes: Route = new ExternalRoutes(valueRepository, internalClient).theValueRoutes
 
   "The service" should {
     "return a 404 when item does not exist" in {
@@ -45,8 +47,9 @@ class HttpSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with Sca
       }
       val probe = testKit.createTestProbe[ValueRepository.Command]()
       val mockedPublisher = testKit.spawn(Behaviors.monitor(probe.ref, mockedBehavior))
-
-      val routes = new ExternalRoutes(mockedPublisher).theValueRoutes
+      val dht = testKit.spawn(DistributedHashTable())
+      val internalClient = testKit.spawn(InternalClient(valueRepository, dht, "", 0))
+      val routes = new ExternalRoutes(mockedPublisher, internalClient).theValueRoutes
 
       Get("/values/myKey") ~> routes ~> check {
         status shouldEqual StatusCodes.OK
@@ -61,8 +64,9 @@ class HttpSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with Sca
       }
       val probe = testKit.createTestProbe[ValueRepository.Command]()
       val mockedPublisher = testKit.spawn(Behaviors.monitor(probe.ref, mockedBehavior))
-
-      val routes = new ExternalRoutes(mockedPublisher).theValueRoutes
+      val dht = testKit.spawn(DistributedHashTable())
+      val internalClient = testKit.spawn(InternalClient(valueRepository, dht, "", 0))
+      val routes = new ExternalRoutes(mockedPublisher, internalClient).theValueRoutes
 
       Delete("/values/myKey") ~> routes ~> check {
         status shouldEqual StatusCodes.OK
@@ -79,8 +83,10 @@ class HttpSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with Sca
       }
       val probe = testKit.createTestProbe[ValueRepository.Command]()
       val mockedPublisher = testKit.spawn(Behaviors.monitor(probe.ref, mockedBehavior))
+      val dht = testKit.spawn(DistributedHashTable())
+      val internalClient = testKit.spawn(InternalClient(valueRepository, dht, "", 0))
 
-      val routes = new ExternalRoutes(mockedPublisher).theValueRoutes
+      val routes = new ExternalRoutes(mockedPublisher, internalClient).theValueRoutes
 
       Delete("/values/myKey") ~> routes ~> check {
         status shouldEqual StatusCodes.InternalServerError

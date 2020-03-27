@@ -29,7 +29,9 @@ class InternalClientSpec extends AnyWordSpec with BeforeAndAfterAll with Matcher
   override def createActorSystem(): actor.ActorSystem = testKit.system.toClassic
 
   val valueRepository: ActorRef[ValueRepository.Command] = testKit.spawn(ValueRepository(""))
-  lazy val routes: Route = new ExternalRoutes(valueRepository).theValueRoutes
+  val dht: ActorRef[DistributedHashTable.Command] = testKit.spawn(DistributedHashTable())
+  val internalClient: ActorRef[InternalClient.Command] = testKit.spawn(InternalClient(valueRepository, dht, "", 0))
+  lazy val routes: Route = new ExternalRoutes(valueRepository, internalClient).theValueRoutes
 
 
   "Get an item" in {
@@ -38,9 +40,9 @@ class InternalClientSpec extends AnyWordSpec with BeforeAndAfterAll with Matcher
     }
 
     val probe = testKit.createTestProbe()
-    val mockedPublisher = testKit.spawn()
-
-    Get("a") ~> r
+//    val mockedPublisher = testKit.spawn()
+//
+//    Get("a") ~> r
   }
 
 

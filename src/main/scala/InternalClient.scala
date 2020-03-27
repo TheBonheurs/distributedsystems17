@@ -1,5 +1,6 @@
 import java.util.concurrent.TimeoutException
 
+import DistributedHashTable.{GetTopN, Response}
 import InternalClient.{Get, Init, Put}
 import akka.actor
 import akka.actor.typed.scaladsl.adapter._
@@ -13,10 +14,15 @@ import akka.stream.Materializer
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
+import akka.actor.typed.scaladsl.AskPattern._
+
+import scala.concurrent.impl.Promise
+
+import scala.concurrent.duration._
 
 object InternalClient {
-  def apply(valueRepository: ActorRef[ValueRepository.Command], host: String, port: Int): Behavior[Command] =
-    Behaviors.setup(context => new InternalClient(context, valueRepository, host, port))
+  def apply(valueRepository: ActorRef[ValueRepository.Command], dht: ActorRef[DistributedHashTable.Command], host: String, port: Int): Behavior[Command] =
+    Behaviors.setup(context => new InternalClient(context, valueRepository, dht, host, port))
 
   sealed trait Command
   final case class Put(value: ValueRepository.Value) extends Command
@@ -25,7 +31,7 @@ object InternalClient {
 }
 
 
-class InternalClient(context: ActorContext[InternalClient.Command], valueRepository: ActorRef[ValueRepository.Command], host: String, port: Int)
+class InternalClient(context: ActorContext[InternalClient.Command], valueRepository: ActorRef[ValueRepository.Command], dht: ActorRef[DistributedHashTable.Command], host: String, port: Int)
   extends AbstractBehavior[InternalClient.Command](context) {
 
   import spray.json._
@@ -35,7 +41,6 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
   implicit val classicActorSystem: actor.ActorSystem = context.system.toClassic
   implicit val materializer: Materializer = Materializer(classicActorSystem)
 
-  val routes = new ExternalRoutes(valueRepository)
   // TODO make sure to initialize self with proper host + port
   var self: Uri = Uri.from(scheme = "http", host ="localhost", port = 8001, path = "/internal")
 
@@ -65,9 +70,17 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
     val futures: List[Future[HttpResponse]] = List(getOtherNodes(key, self))
 
     // Use DHT to get top N nodes
-    for (x <- DHT.getTopNPreferenceNodes(DHT.getHash(key), N)) {
-      futures :+ getOtherNodes(key, Uri.from(scheme = "http", host = x.host, port = x.port, path = "/internal"))
+    val topNListFuture = dht.ask(GetTopN(DistributedHashTable.getHash(key), N, _: ActorRef[Option[LazyList[RingNode]]]))(5.second, schedulerFromActorSystem).map {
+      case Some(topNList) => topNList
+      case None => throw new Exception("Error getting top N nodes")
     }
+
+    topNListFuture.map(topNList => {
+      for (node <- topNList) {
+        futures :+ getOtherNodes(key, Uri.from(scheme = "http", host = node.host, port = node.port, path = "/internal"))
+      }
+    })
+
     // Convert to Future[Try[T]] to catch exceptions in the Future.sequence line
     val listOfFutureTrys = futures.map(futureToFutureTry)
     // Convert to Future[List[Try[HttpResponse]]]
@@ -81,7 +94,7 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
     val successResponsesFuture = successesFuture.map(f => f.map(t => t.get))
     val valueFuture = successResponsesFuture.map(l => {
       if (l.size < R - 1) {
-       throw new TimeoutException("Did not get R - 1 successfull reads from other nodes")
+        throw new TimeoutException("Did not get R - 1 successfull reads from other nodes")
       } else {
         val values = List.empty[ValueRepository.Value]
         // For all responses
@@ -104,9 +117,17 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
     val futures: List[Future[HttpResponse]] = List(putOtherNodes(v, self))
 
     // Use DHT to get top N nodes
-    for (x <- DHT.getTopNPreferenceNodes(DHT.getHash(v.key), N)) {
-      futures :+ putOtherNodes(v, Uri.from(scheme = "http", host = x.host, port = x.port, path = "/internal"))
+    val topNListFuture = dht.ask(GetTopN(DistributedHashTable.getHash(v.key), N, _: ActorRef[Option[LazyList[RingNode]]]))(5.second, schedulerFromActorSystem).map {
+      case Some(topNList) => topNList
+      case None => throw new Exception("Error getting top N nodes")
     }
+
+    topNListFuture.map(topNList => {
+      for (node <-topNList) {
+        futures :+ putOtherNodes(v, Uri.from(scheme = "http", host = node.host, port = node.port, path = "/internal"))
+      }
+    })
+
     // Convert to Future[Try[T]] to catch exceptions in the Future.sequence line
     val listOfFutureTrys = futures.map(futureToFutureTry)
     // Convert to Future[List[Try[HttpResponse]]]

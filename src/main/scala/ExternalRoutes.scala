@@ -7,7 +7,7 @@ import akka.util.Timeout
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class ExternalRoutes(buildValueRepository: ActorRef[ValueRepository.Command])(implicit system: ActorSystem[_]) {
+class ExternalRoutes(buildValueRepository: ActorRef[ValueRepository.Command], internalClient: ActorRef[InternalClient.Command])(implicit system: ActorSystem[_]) {
   import JsonSupport._
   import akka.actor.typed.scaladsl.AskPattern._
 
