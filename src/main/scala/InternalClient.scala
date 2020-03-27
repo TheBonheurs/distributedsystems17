@@ -75,7 +75,7 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
     val futures: List[Future[HttpResponse]] = List(getOtherNodes(key, self))
 
     // Use DHT to get top N nodes
-    val topNListFuture = dht.ask(GetTopN(DistributedHashTable.getHash(key), N, _: ActorRef[Option[LazyList[RingNode]]]))(5.second, schedulerFromActorSystem).map {
+    val topNListFuture = dht.ask(GetTopN(DistributedHashTable.getHash(key), N, _: ActorRef[Option[LazyList[RingNode]]]))(5.seconds, schedulerFromActorSystem).map {
       case Some(topNList) => topNList
       case None => throw new Exception("Error getting top N nodes")
     }
@@ -122,7 +122,7 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
     val futures: List[Future[HttpResponse]] = List(putOtherNodes(v, self))
 
     // Use DHT to get top N nodes
-    val topNListFuture = dht.ask(GetTopN(DistributedHashTable.getHash(v.key), N, _: ActorRef[Option[LazyList[RingNode]]]))(5.second, schedulerFromActorSystem).map {
+    val topNListFuture = dht.ask(GetTopN(DistributedHashTable.getHash(v.key), N, _: ActorRef[Option[LazyList[RingNode]]]))(5.seconds, schedulerFromActorSystem).map {
       case Some(topNList) => topNList
       case None => throw new Exception("Error getting top N nodes")
     }
