@@ -37,7 +37,10 @@ object Node {
 
     val buildValueRepository = ctx.spawn(ValueRepository(config.name), "ValueRepository")
 
-    val internalClient = ctx.spawn(InternalClient(buildValueRepository, dht, config.internalHost, config.internalPort), "InternalClient")
+    val N:Int = 3
+    val R:Int = N - 1
+    val W:Int = N
+    val internalClient = ctx.spawn(InternalClient(buildValueRepository, dht, config.internalHost, config.internalPort, N, R, W), "InternalClient")
 
     val internalServer = ctx.spawn(InternalServer(buildValueRepository, config.internalHost, config.internalPort), "InternalServer")
     val externalServer = ctx.spawn(ExternalServer(buildValueRepository, internalClient, config.externalHost, config.externalPort), "ExternalServer")

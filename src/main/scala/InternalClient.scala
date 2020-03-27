@@ -18,8 +18,8 @@ import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 
 object InternalClient {
-  def apply(valueRepository: ActorRef[ValueRepository.Command], dht: ActorRef[DistributedHashTable.Command], host: String, port: Int): Behavior[Command] =
-    Behaviors.setup(context => new InternalClient(context, valueRepository, dht, host, port))
+  def apply(valueRepository: ActorRef[ValueRepository.Command], dht: ActorRef[DistributedHashTable.Command], host: String, port: Int, n:Int, r:Int, w:Int): Behavior[Command] =
+    Behaviors.setup(context => new InternalClient(context, valueRepository, dht, host, port, n, r, w))
 
   // Trait defining responses
   sealed trait Response
@@ -36,7 +36,7 @@ object InternalClient {
 }
 
 
-class InternalClient(context: ActorContext[InternalClient.Command], valueRepository: ActorRef[ValueRepository.Command], dht: ActorRef[DistributedHashTable.Command], host: String, port: Int)
+class InternalClient(context: ActorContext[InternalClient.Command], valueRepository: ActorRef[ValueRepository.Command], dht: ActorRef[DistributedHashTable.Command], host: String, port: Int, n:Int, r:Int, w:Int)
   extends AbstractBehavior[InternalClient.Command](context) {
 
   import JsonSupport._
@@ -49,9 +49,9 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
   // TODO make sure to initialize self with proper host + port
   var self: Uri = Uri.from(scheme = "http", host ="localhost", port = 9001, path = "/internal")
 
-  var N: Int = 3
-  var R: Int = N - 1
-  var W: Int = N
+  var N: Int = n
+  var R: Int = r
+  var W: Int = w
 
   /**
    * Helper method for converting futures to future try
