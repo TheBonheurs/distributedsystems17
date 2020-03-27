@@ -1,6 +1,6 @@
 import java.util.concurrent.TimeoutException
 
-import InternalClient.{Get, Put}
+import InternalClient.{Get, Init, Put}
 import akka.actor
 import akka.actor.typed.scaladsl.adapter._
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
@@ -21,7 +21,7 @@ object InternalClient {
   sealed trait Command
   final case class Put(value: ValueRepository.Value) extends Command
   final case class Get(key: String) extends  Command
-  final case class Init(host:String, port:Int, n:Int, r:Int, w:Int)
+  final case class Init(host:String, port:Int, n:Int, r:Int, w:Int) extends Command
 }
 
 
@@ -192,6 +192,7 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
       case Get(key) => read(key)
         Behaviors.same
       case Init(h, p, n, r, w) => initParams(h, p, n, r, w)
+        Behaviors.same
     }
   }
 }
