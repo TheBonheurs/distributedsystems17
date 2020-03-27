@@ -2,6 +2,7 @@ import java.util.concurrent.TimeoutException
 
 import DistributedHashTable.{GetTopN, Response}
 import InternalClient.{Get, Init, Put}
+import ValueRepository.Value
 import akka.actor
 import akka.actor.typed.scaladsl.adapter._
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
@@ -17,7 +18,6 @@ import scala.util.{Failure, Success, Try}
 import akka.actor.typed.scaladsl.AskPattern._
 
 import scala.concurrent.impl.Promise
-
 import scala.concurrent.duration._
 
 object InternalClient {
@@ -25,8 +25,8 @@ object InternalClient {
     Behaviors.setup(context => new InternalClient(context, valueRepository, dht, host, port))
 
   sealed trait Command
-  final case class Put(value: ValueRepository.Value) extends Command
-  final case class Get(key: String) extends  Command
+  final case class Put(value: ValueRepository.Value, replyTo: ActorRef[Future[Boolean]]) extends Command
+  final case class Get(key: String, replyTo: ActorRef[Future[Value]]) extends  Command
   final case class Init(host:String, port:Int, n:Int, r:Int, w:Int) extends Command
 }
 
@@ -208,9 +208,13 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
 
   override def onMessage(msg: InternalClient.Command): Behavior[InternalClient.Command] = {
     msg match {
-      case Put(value) => write(value)
+      case Put(value, replyTo) =>
+        val boolFuture = write(value)
+        replyTo ! boolFuture
         Behaviors.same
-      case Get(key) => read(key)
+      case Get(key, replyTo) =>
+        val valueFuture = read(key)
+        replyTo ! valueFuture
         Behaviors.same
       case Init(h, p, n, r, w) => initParams(h, p, n, r, w)
         Behaviors.same
