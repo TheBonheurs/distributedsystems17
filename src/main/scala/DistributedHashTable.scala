@@ -41,7 +41,7 @@ object DistributedHashTable {
     case GetRing(replyTo) =>
       replyTo ! ring.take(size)
       Behaviors.same
-    case GetTopN(hash, _, replyTo) if ring(size -1).position <= hash =>
+    case GetTopN(hash, _, replyTo) if ring.isEmpty || ring(size -1).position <= hash =>
       replyTo ! None
       Behaviors.same
     case GetTopN(hash, n, replyTo) =>
