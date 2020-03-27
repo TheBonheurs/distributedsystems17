@@ -1,8 +1,9 @@
 import akka.actor.typed.ActorSystem
 
-case class NodeConfig(index: Int, name: String, externalHost: String, externalPort: Int, internalHost: String, internalPort: Int)
 
 object main {
+  case class NodeConfig(index: Int, name: String, externalHost: String, externalPort: Int, internalHost: String, internalPort: Int)
+
   def main(args: Array[String]): Unit = {
 
     // name, node (external), port (external), host (internal), port (internal)

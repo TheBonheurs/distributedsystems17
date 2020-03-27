@@ -1,6 +1,11 @@
-import akka.actor.typed.Behavior
+import DistributedHashTable.{AddNode, Response}
+import akka.actor.typed.{ActorRef, Behavior, Scheduler}
 import akka.actor.typed.scaladsl.Behaviors
 import akka.http.scaladsl.Http.ServerBinding
+import akka.util.Timeout
+import main.NodeConfig
+
+import scala.concurrent.duration._
 
 object Node {
 
@@ -19,10 +24,15 @@ object Node {
   case object Stop extends Message
 
   def apply(config: NodeConfig, allNodes: List[NodeConfig]): Behavior[Message] = Behaviors.setup { ctx =>
+
+    implicit val scheduler: Scheduler = ctx.system.scheduler
+    implicit val timeout: Timeout = Timeout(3.seconds)
+
     ctx.log.info("Starting node {}", config.name)
+    val dht = ctx.spawn(DistributedHashTable(), "DistributedHashTable")
 
     for (node <- allNodes) {
-      DHT.addNode(RingNode(node.index, node.internalHost, node.internalPort))
+      dht ! AddNode(RingNode(node.index, node.internalHost, node.internalPort), ctx.system.ignoreRef[Response])
     }
 
     val buildValueRepository = ctx.spawn(ValueRepository(config.name), "ValueRepository")
