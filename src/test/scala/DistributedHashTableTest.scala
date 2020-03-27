@@ -39,8 +39,6 @@ class DistributedHashTableTest extends AnyFlatSpec with Matchers with BeforeAndA
 
     val dhtRing = result(dht.ask(GetRing(_: ActorRef[LazyList[RingNode]])), 1.second)
 
-    dhtRing.take(3) should be (List(node1, node2, node1))
-
     dhtRing.head should be(node1)
     dhtRing(1) should be(node2)
   }
@@ -60,21 +58,7 @@ class DistributedHashTableTest extends AnyFlatSpec with Matchers with BeforeAndA
 
     val list = result(dht.ask(GetRing(_: ActorRef[LazyList[RingNode]])), 1.second)
 
-    list.take(4) should be(List(node1, node2, node3, node4))
-  }
-
-  "nodes" should "be circular" in {
-    val node1 = RingNode(BigInt(1), "localhost", 8000)
-    val node2 = RingNode(BigInt(2), "localhost", 8000)
-    val node3 = RingNode(BigInt(3), "localhost", 8000)
-
-    val ring = DistributedHashTable.createRing(List(node1, node2, node3))
-
-    val dht = testKit.spawn(DistributedHashTable(ring, 3))
-
-    val list = result(dht.ask(GetRing(_: ActorRef[LazyList[RingNode]])), 1.second)
-
-    list.take(5) should be(List(node1, node2, node3, node1, node2))
+    list should be(List(node1, node2, node3, node4))
   }
 
   "preference list" should "return top N nodes" in {
@@ -88,8 +72,8 @@ class DistributedHashTableTest extends AnyFlatSpec with Matchers with BeforeAndA
 
     val dht = testKit.spawn(DistributedHashTable(ring, 5))
 
-    val list = result(dht.ask(GetTopN(150, 3, _: ActorRef[LazyList[RingNode]])), 1.second)
-    list should be(List(node3, node4, node5))
+    val list = result(dht.ask(GetTopN(150, 3, _: ActorRef[Option[LazyList[RingNode]]])), 1.second)
+    list should be(Some(List(node3, node4, node5)))
   }
 
   "preference list" should "return top N nodes circularly" in {
@@ -103,7 +87,19 @@ class DistributedHashTableTest extends AnyFlatSpec with Matchers with BeforeAndA
 
     val dht = testKit.spawn(DistributedHashTable(ring, 5))
 
-    val list = result(dht.ask(GetTopN(250, 4, _: ActorRef[LazyList[RingNode]])), 1.second)
-    list should be(List(node4, node5, node1, node2))
+    val list = result(dht.ask(GetTopN(250, 4, _: ActorRef[Option[LazyList[RingNode]]])), 1.second)
+    list should be(Some(List(node4, node5, node1, node2)))
+  }
+
+  "preference list" should "throw an error if hash is too large" in {
+    val node1 = RingNode(BigInt(1), "localhost", 8000)
+    val node2 = RingNode(BigInt(100), "localhost", 8001)
+
+    val ring = DistributedHashTable.createRing(List(node1, node2))
+
+    val dht = testKit.spawn(DistributedHashTable(ring, 5))
+
+    val list = result(dht.ask(GetTopN(250, 4, _: ActorRef[Option[LazyList[RingNode]]])), 1.second)
+    list should be(None)
   }
 }

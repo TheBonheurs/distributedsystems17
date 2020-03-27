@@ -6,6 +6,7 @@ import akka.actor.typed.{ActorRef, Behavior}
 import scala.collection.immutable.LinearSeq
 
 object DistributedHashTable {
+
   sealed trait Response
 
   final case object OK extends Response
@@ -19,7 +20,7 @@ object DistributedHashTable {
 
   final case class GetRing(replyTo: ActorRef[LazyList[RingNode]]) extends Command
 
-  final case class GetTopN(hash: BigInt, n: Int, replyTo: ActorRef[LazyList[RingNode]]) extends Command
+  final case class GetTopN(hash: BigInt, n: Int, replyTo: ActorRef[Option[LazyList[RingNode]]]) extends Command
 
   implicit val order: Ordering[RingNode] = Ordering.by(node => node.position)
 
@@ -38,10 +39,13 @@ object DistributedHashTable {
       replyTo ! OK
       DistributedHashTable()
     case GetRing(replyTo) =>
-      replyTo ! ring
+      replyTo ! ring.take(size)
+      Behaviors.same
+    case GetTopN(hash, _, replyTo) if ring(size -1).position <= hash =>
+      replyTo ! None
       Behaviors.same
     case GetTopN(hash, n, replyTo) =>
-      replyTo ! ring.dropWhile(r => r.position <= hash).take(n)
+      replyTo ! Some(ring.dropWhile(r => r.position <= hash).take(n))
       Behaviors.same
   }
 
