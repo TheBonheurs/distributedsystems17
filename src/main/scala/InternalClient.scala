@@ -1,7 +1,7 @@
 import java.util.concurrent.TimeoutException
 
 import DistributedHashTable.{GetTopN, Response}
-import InternalClient.{Get, Init, KO, OK, Put}
+import InternalClient.{Get, Init, KO, OK, Put, ValueRes}
 import ValueRepository.Value
 import akka.actor
 import akka.actor.typed.scaladsl.adapter._
@@ -27,14 +27,14 @@ object InternalClient {
   // Trait defining responses
   sealed trait Response
 
-  case object Value extends Response
+  final case class ValueRes(value: ValueRepository.Value) extends Response
   case object OK extends Response
   case object KO extends Response
 
   sealed trait Command
 
   final case class Put(value: ValueRepository.Value, replyTo: ActorRef[Response]) extends Command
-  final case class Get(key: String, replyTo: ActorRef[Future[Value]]) extends  Command
+  final case class Get(key: String, replyTo: ActorRef[ValueRes]) extends  Command
   final case class Init(host:String, port:Int, n:Int, r:Int, w:Int) extends Command
   final case class Result(res:Future[Any]) extends Command
 }
@@ -221,7 +221,7 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
         if (write(value).value.get.get) replyTo ! OK else replyTo ! KO
         this
       case Get(key, replyTo) =>
-        replyTo ! read(key)
+        replyTo ! ValueRes(read(key).value.get.get)
         Behaviors.same
       case Init(h, p, n, r, w) => initParams(h, p, n, r, w)
         this
