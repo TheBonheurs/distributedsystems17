@@ -1,9 +1,9 @@
 import java.util.concurrent.TimeoutException
 
-import DistributedHashTable.{GetTopN, Response}
-import InternalClient.{Get, Init, KO, OK, Put, ValueRes}
-import ValueRepository.Value
+import DistributedHashTable.GetTopN
+import InternalClient._
 import akka.actor
+import akka.actor.typed.scaladsl.AskPattern._
 import akka.actor.typed.scaladsl.adapter._
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
@@ -14,11 +14,8 @@ import akka.stream.Materializer
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.util.{Failure, Success, Try}
-import akka.actor.typed.scaladsl.AskPattern._
-
-import scala.concurrent.impl.Promise
 import scala.concurrent.duration._
+import scala.util.{Failure, Success, Try}
 
 object InternalClient {
   def apply(valueRepository: ActorRef[ValueRepository.Command], dht: ActorRef[DistributedHashTable.Command], host: String, port: Int): Behavior[Command] =
@@ -36,15 +33,14 @@ object InternalClient {
   final case class Put(value: ValueRepository.Value, replyTo: ActorRef[Response]) extends Command
   final case class Get(key: String, replyTo: ActorRef[ValueRes]) extends  Command
   final case class Init(host:String, port:Int, n:Int, r:Int, w:Int) extends Command
-  final case class Result(res:Future[Any]) extends Command
 }
 
 
 class InternalClient(context: ActorContext[InternalClient.Command], valueRepository: ActorRef[ValueRepository.Command], dht: ActorRef[DistributedHashTable.Command], host: String, port: Int)
   extends AbstractBehavior[InternalClient.Command](context) {
 
-  import spray.json._
   import JsonSupport._
+  import spray.json._
 
   implicit val actorSystem: ActorSystem[Nothing] = context.system
   implicit val classicActorSystem: actor.ActorSystem = context.system.toClassic
