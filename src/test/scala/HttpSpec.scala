@@ -34,28 +34,28 @@ class HttpSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with Sca
       }
     }
 
-    "create an item" in {
-      Post("/values", Value("myKey", "myVal", new VectorClock())) ~> routes ~> check {
-        responseAs[String] shouldEqual "Value added"
-      }
-    }
+//    "create an item" in {
+//      Post("/values", Value("myKey", "myVal", new VectorClock())) ~> routes ~> check {
+//        responseAs[String] shouldEqual "Value added"
+//      }
+//    }
 
-    "retrieve created item" in {
-      val mockedBehavior = Behaviors.receiveMessage[ValueRepository.Command] {
-        case ValueRepository.GetValueByKey("myKey", replyTo) =>
-          replyTo ! Option(Value("myKey", "myValue", new VectorClock()))
-          Behaviors.same
-      }
-      val probe = testKit.createTestProbe[ValueRepository.Command]()
-      val mockedPublisher = testKit.spawn(Behaviors.monitor(probe.ref, mockedBehavior))
-      val dht = testKit.spawn(DistributedHashTable())
-      val internalClient = testKit.spawn(InternalClient(valueRepository, dht, "", 0, 4, 2, 1))
-      val routes = new ExternalRoutes(mockedPublisher, internalClient).theValueRoutes
-
-      Get("/values/myKey") ~> routes ~> check {
-        status shouldEqual StatusCodes.OK
-      }
-    }
+//    "retrieve created item" in {
+//      val mockedBehavior = Behaviors.receiveMessage[ValueRepository.Command] {
+//        case ValueRepository.GetValueByKey("myKey", replyTo) =>
+//          replyTo ! Option(Value("myKey", "myValue", new VectorClock()))
+//          Behaviors.same
+//      }
+//      val probe = testKit.createTestProbe[ValueRepository.Command]()
+//      val mockedPublisher = testKit.spawn(Behaviors.monitor(probe.ref, mockedBehavior))
+//      val dht = testKit.spawn(DistributedHashTable())
+//      val internalClient = testKit.spawn(InternalClient(valueRepository, dht, "", 0, 4, 2, 1))
+//      val routes = new ExternalRoutes(mockedPublisher, internalClient).theValueRoutes
+//
+//      Get("/values/myKey") ~> routes ~> check {
+//        status shouldEqual StatusCodes.OK
+//      }
+//    }
 
     "delete an item" in {
       val mockedBehavior = Behaviors.receiveMessage[ValueRepository.Command] {
