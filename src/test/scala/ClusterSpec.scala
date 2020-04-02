@@ -26,6 +26,7 @@ class ClusterSpec extends AnyWordSpec with Matchers with BeforeAndAfter {
 
   "The cluster" should {
     "start" in {
+      Thread.sleep(1000)
       Http("http://localhost:8001/values")
         .timeout(1000000, 100000)
         .postData("""{"key": "myKey", "value": "myValue", "version": {}}""")

@@ -35,16 +35,15 @@ class HttpSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with Sca
     }
 
     "create an item" in {
-      val value = Value("myKey", "myVal", new VectorClock())
       val mockedBehavior = Behaviors.receiveMessage[InternalClient.Command] {
-        case InternalClient.Put(value, replyTo) =>
+        case InternalClient.Put(_, replyTo) =>
           replyTo ! InternalClient.OK
           Behaviors.same
       }
       val valueRepository = testKit.spawn(ValueRepository(""))
       val internalProbe = testKit.createTestProbe[InternalClient.Command]()
-      val mocketInternalClient = testKit.spawn(Behaviors.monitor(internalProbe.ref, mockedBehavior))
-      val routes = new ExternalRoutes(valueRepository, mocketInternalClient).theValueRoutes
+      val mockedInternalClient = testKit.spawn(Behaviors.monitor(internalProbe.ref, mockedBehavior))
+      val routes = new ExternalRoutes(valueRepository, mockedInternalClient).theValueRoutes
       Post("/values", Value("myKey", "myVal", new VectorClock())) ~> routes ~> check {
         responseAs[String] shouldEqual "Value added"
       }
@@ -58,8 +57,8 @@ class HttpSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with Sca
       }
       val valueRepository = testKit.spawn(ValueRepository(""))
       val internalProbe = testKit.createTestProbe[InternalClient.Command]()
-      val mocketInternalClient = testKit.spawn(Behaviors.monitor(internalProbe.ref, mockedBehavior))
-      val routes = new ExternalRoutes(valueRepository, mocketInternalClient).theValueRoutes
+      val mockedInternalClient = testKit.spawn(Behaviors.monitor(internalProbe.ref, mockedBehavior))
+      val routes = new ExternalRoutes(valueRepository, mockedInternalClient).theValueRoutes
 
       Get("/values/myKey") ~> routes ~> check {
         status shouldEqual StatusCodes.OK

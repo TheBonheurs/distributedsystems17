@@ -32,7 +32,7 @@ class InternalServer(context: ActorContext[InternalServer.Command], valueReposit
   val internalRoutes = new InternalRoutes(valueRepository)
 
   var started = false
-  var binding: ServerBinding = _;
+  var binding: ServerBinding = _
 
   val serverBinding: Future[Http.ServerBinding] =
     Http.apply().bindAndHandle(internalRoutes.theInternalValueRoutes, host, port)
@@ -46,7 +46,7 @@ class InternalServer(context: ActorContext[InternalServer.Command], valueReposit
     msg match {
       case Started(binding) =>
         started = true
-        this.binding = binding;
+        this.binding = binding
         context.log.info(
           "Internal server online at http://{}:{}/",
           binding.localAddress.getHostString,
