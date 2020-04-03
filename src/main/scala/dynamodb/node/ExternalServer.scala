@@ -1,7 +1,9 @@
-import akka.actor.{ActorSystem, typed}
-import akka.actor.typed.{ActorRef, Behavior}
+package dynamodb.node
+
 import akka.actor.typed.scaladsl.adapter._
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
+import akka.actor.typed.{ActorRef, Behavior}
+import akka.actor.{ActorSystem, typed}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.Http.ServerBinding
 import akka.stream.Materializer

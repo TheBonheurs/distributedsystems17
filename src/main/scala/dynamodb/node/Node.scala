@@ -1,9 +1,11 @@
-import DistributedHashTable.{AddNode, Response}
+package dynamodb.node
+
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{Behavior, Scheduler}
 import akka.http.scaladsl.Http.ServerBinding
 import akka.util.Timeout
-import main.NodeConfig
+import dynamodb.node.DistributedHashTable.{AddNode, Response}
+import dynamodb.node.mainObj.NodeConfig
 
 import scala.concurrent.duration._
 

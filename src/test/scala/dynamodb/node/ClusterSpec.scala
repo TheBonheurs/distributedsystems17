@@ -1,6 +1,8 @@
-import Node.Stop
+package dynamodb.node
+
 import akka.actor.typed.ActorSystem
-import main.NodeConfig
+import dynamodb.node.Node.Stop
+import dynamodb.node.mainObj.NodeConfig
 import org.scalatest.BeforeAndAfter
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec

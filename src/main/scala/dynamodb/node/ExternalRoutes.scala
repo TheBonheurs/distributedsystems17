@@ -1,12 +1,14 @@
-import InternalClient.{Get, KO, Put, ValueRes}
+package dynamodb.node
+
 import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.util.Timeout
+import dynamodb.node.InternalClient.{Get, KO, Put, ValueRes}
 
-import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 
 class ExternalRoutes(buildValueRepository: ActorRef[ValueRepository.Command], internalClient: ActorRef[InternalClient.Command])(implicit system: ActorSystem[_]) {
   import JsonSupport._

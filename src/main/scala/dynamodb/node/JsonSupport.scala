@@ -1,3 +1,5 @@
+package dynamodb.node
+
 import akka.cluster.VectorClock
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 

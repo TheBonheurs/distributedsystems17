@@ -1,4 +1,5 @@
-import DistributedHashTable.GetTopN
+package dynamodb.node
+
 import akka.actor
 import akka.actor.typed.scaladsl.AskPattern._
 import akka.actor.typed.scaladsl.adapter._
@@ -10,6 +11,7 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
 import akka.util.Timeout
+import dynamodb.node.DistributedHashTable.GetTopN
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

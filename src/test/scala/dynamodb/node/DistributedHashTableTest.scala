@@ -1,9 +1,11 @@
+package dynamodb.node
+
 import java.security.MessageDigest
 
-import DistributedHashTable.{AddNode, GetRing, GetTopN, OK, Response}
 import akka.actor.testkit.typed.scaladsl.ActorTestKit
 import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.util.Timeout
+import dynamodb.node.DistributedHashTable.{AddNode, GetRing, GetTopN, OK, Response}
 import org.scalatest.BeforeAndAfter
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers

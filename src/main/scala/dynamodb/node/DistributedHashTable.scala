@@ -1,3 +1,5 @@
+package dynamodb.node
+
 import java.security.MessageDigest
 
 import akka.actor.typed.scaladsl.Behaviors

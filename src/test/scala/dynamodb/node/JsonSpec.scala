@@ -1,6 +1,8 @@
-import JsonSupport._
-import ValueRepository.Value
+package dynamodb.node
+
 import akka.cluster.VectorClock
+import dynamodb.node.JsonSupport._
+import dynamodb.node.ValueRepository.Value
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import spray.json._

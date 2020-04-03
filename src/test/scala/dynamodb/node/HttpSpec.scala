@@ -1,4 +1,5 @@
-import ValueRepository.{KO, OK, Value}
+package dynamodb.node
+
 import akka.actor
 import akka.actor.testkit.typed.scaladsl.ActorTestKit
 import akka.actor.typed.scaladsl.Behaviors
@@ -8,12 +9,13 @@ import akka.cluster.VectorClock
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
+import dynamodb.node.ValueRepository.{KO, OK, Value}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
 class HttpSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with ScalatestRouteTest {
-  import JsonSupport._
+  import dynamodb.node.JsonSupport._
 
   lazy val testKit: ActorTestKit = ActorTestKit()
 
