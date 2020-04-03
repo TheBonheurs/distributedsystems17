@@ -25,7 +25,7 @@ class HttpSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with Sca
 
   val valueRepository: ActorRef[ValueRepository.Command] = testKit.spawn(ValueRepository(""))
   val dht: ActorRef[DistributedHashTable.Command] = testKit.spawn(DistributedHashTable())
-  val internalClient: ActorRef[InternalClient.Command] = testKit.spawn(InternalClient(valueRepository, dht, "", 0, 4, 3, 2))
+  val internalClient: ActorRef[InternalClient.Command] = testKit.spawn(InternalClient(valueRepository, dht, "", 0, 4, 3, 2, ""))
 
   lazy val routes: Route = new ExternalRoutes(valueRepository, internalClient).theValueRoutes
 
@@ -77,7 +77,7 @@ class HttpSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with Sca
       val mockedPublisher = testKit.spawn(Behaviors.monitor(probe.ref, mockedBehavior))
       val dht = testKit.spawn(DistributedHashTable())
 
-      val internalClient = testKit.spawn(InternalClient(valueRepository, dht, "", 0, 4, 2, 1))
+      val internalClient = testKit.spawn(InternalClient(valueRepository, dht, "", 0, 4, 2, 1, ""))
       val routes = new ExternalRoutes(mockedPublisher, internalClient).theValueRoutes
 
       Delete("/values/myKey") ~> routes ~> check {
@@ -97,7 +97,7 @@ class HttpSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with Sca
       val mockedPublisher = testKit.spawn(Behaviors.monitor(probe.ref, mockedBehavior))
       val dht = testKit.spawn(DistributedHashTable())
 
-      val internalClient = testKit.spawn(InternalClient(valueRepository, dht, "", 0, 4, 2, 1))
+      val internalClient = testKit.spawn(InternalClient(valueRepository, dht, "", 0, 4, 2, 1, ""))
 
       val routes = new ExternalRoutes(mockedPublisher, internalClient).theValueRoutes
 

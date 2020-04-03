@@ -37,9 +37,9 @@ class ValueRepositorySpec extends AnyFlatSpec with Matchers with BeforeAndAfter 
   it should "read an added value" in {
     val valueRepository = testKit.spawn(ValueRepository("dynamodb.node.ValueRepositorySpec"))
 
-    result(valueRepository.ask(AddValue(Value("myKey", "myValue"), _: ActorRef[Response])), 1 second) should be(OK)
+    result(valueRepository.ask(AddValue(Value("myKey", "myValue", new VectorClock(TreeMap("testName" -> 0))), _: ActorRef[Response])), 1 second) should be(OK)
 
-    result(valueRepository.ask(GetValueByKey("myKey", _: ActorRef[Option[Value]])), 1 second) should be(Option(Value("myKey", "myValue", new VectorClock(TreeMap("dynamodb.node.ValueRepositorySpec" -> 0)))))
+    result(valueRepository.ask(GetValueByKey("myKey", _: ActorRef[Option[Value]])), 1 second) should be(Option(Value("myKey", "myValue", new VectorClock(TreeMap("testName" -> 0)))))
   }
 
   it should "remove a value" in {
@@ -69,9 +69,9 @@ class ValueRepositorySpec extends AnyFlatSpec with Matchers with BeforeAndAfter 
   it should "not update a value if the version is equal" in {
     val valueRepository = testKit.spawn(ValueRepository("dynamodb.node.ValueRepositorySpec"))
 
-    result(valueRepository.ask(AddValue(Value("myKey", "myOtherValue"), _: ActorRef[Response])), 1 second) should be(OK)
+    result(valueRepository.ask(AddValue(Value("myKey", "myOtherValue", new VectorClock(TreeMap("dynamodb.node.ValueRepositorySpec" -> 2))), _: ActorRef[Response])), 1 second) should be(OK)
 
-    result(valueRepository.ask(AddValue(Value("myKey", "myAnotherValue", new VectorClock(TreeMap("dynamodb.node.ValueRepositorySpec" -> 0))), _: ActorRef[Response])), 1 second) should be(KO("Version too old"))
+    result(valueRepository.ask(AddValue(Value("myKey", "myAnotherValue", new VectorClock(TreeMap("dynamodb.node.ValueRepositorySpec" -> 2))), _: ActorRef[Response])), 1 second) should be(KO("Version too old"))
   }
 
   it should "not update a value if the version is older" in {

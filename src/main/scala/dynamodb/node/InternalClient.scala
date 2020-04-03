@@ -5,6 +5,7 @@ import akka.actor.typed.scaladsl.AskPattern._
 import akka.actor.typed.scaladsl.adapter._
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
+import akka.cluster.VectorClock
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.ContentTypes.`application/json`
 import akka.http.scaladsl.model._
@@ -12,15 +13,18 @@ import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
 import akka.util.Timeout
 import dynamodb.node.DistributedHashTable.GetTopN
+import dynamodb.node.ValueRepository.GetValueByKey
 
+import scala.collection.immutable.TreeMap
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.concurrent.impl.Promise
 import scala.util.{Failure, Success, Try}
 
 object InternalClient {
-  def apply(valueRepository: ActorRef[ValueRepository.Command], dht: ActorRef[DistributedHashTable.Command], host: String, port: Int, n: Int, r: Int, w: Int): Behavior[Command] =
-    Behaviors.setup(context => new InternalClient(context, valueRepository, dht, host, port, n, r, w))
+  def apply(valueRepository: ActorRef[ValueRepository.Command], dht: ActorRef[DistributedHashTable.Command], host: String, port: Int, n: Int, r: Int, w: Int, nodeName: String): Behavior[Command] =
+    Behaviors.setup(context => new InternalClient(context, valueRepository, dht, host, port, n, r, w, nodeName))
 
   // Trait defining responses
   sealed trait Response
@@ -48,7 +52,7 @@ object InternalClient {
 }
 
 
-class InternalClient(context: ActorContext[InternalClient.Command], valueRepository: ActorRef[ValueRepository.Command], dht: ActorRef[DistributedHashTable.Command], host: String, port: Int, n: Int, r: Int, w: Int)
+class InternalClient(context: ActorContext[InternalClient.Command], valueRepository: ActorRef[ValueRepository.Command], dht: ActorRef[DistributedHashTable.Command], host: String, port: Int, n: Int, r: Int, w: Int, nodeName: String)
   extends AbstractBehavior[InternalClient.Command](context) {
 
   import InternalClient._
@@ -102,13 +106,24 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
    * @return True if written to W - 1 other nodes successfully, false otherwise
    */
   def write(v: ValueRepository.Value): Future[Boolean] = {
-    for {
-      topN <- dht.ask(GetTopN(DistributedHashTable.getHash(v.key), N, _: ActorRef[Option[LazyList[RingNode]]]))
-      responses <- topN match {
-        case Some(topN) => Future.sequence(topN.map(node => putOtherNodes(v, Uri.from("http", "", node.host, node.port, "/internal"))))
-        case _ => throw new Exception("Error getting top N nodes")
-      }
-    } yield responses.count(r => r.status == StatusCodes.OK) >= W - 1
+    val getFuture = valueRepository.ask(GetValueByKey(v.key, _: ActorRef[Option[ValueRepository.Value]]))
+    val versionFuture = getFuture.map {
+      case Some(value) =>
+        val newVC = value.version.:+(nodeName)
+        ValueRepository.Value(v.key, v.value, newVC)
+      case None =>
+        val vectorClock = new VectorClock(TreeMap(nodeName -> 0))
+        ValueRepository.Value(v.key, v.value, vectorClock)
+    }
+    versionFuture.flatMap(value => {
+      for {
+        topN <- dht.ask(GetTopN(DistributedHashTable.getHash(value.key), N, _: ActorRef[Option[LazyList[RingNode]]]))
+        responses <- topN match {
+          case Some(topN) => Future.sequence(topN.map(node => putOtherNodes(value, Uri.from("http", "", node.host, node.port, "/internal"))))
+          case _ => throw new Exception("Error getting top N nodes")
+        }
+      } yield responses.count(r => r.status == StatusCodes.OK) >= W - 1
+    })
   }
 
   /**
