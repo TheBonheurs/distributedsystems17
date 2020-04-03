@@ -12,9 +12,9 @@ class ClusterSpec extends AnyWordSpec with Matchers with BeforeAndAfter {
   before {
     val nodes = List(
       NodeConfig(BigInt("0"), "node1", "localhost", 8001, "localhost", 9001),
-      NodeConfig(BigInt("1"), "node2", "localhost", 8002, "localhost", 9002),
-      NodeConfig(BigInt("3"), "node3", "localhost", 8003, "localhost", 9003),
-      NodeConfig(BigInt("4"), "node4", "localhost", 8004, "localhost", 9004),
+      NodeConfig(BigInt("20"), "node2", "localhost", 8002, "localhost", 9002),
+      NodeConfig(BigInt("50"), "node3", "localhost", 8003, "localhost", 9003),
+      NodeConfig(BigInt("90"), "node4", "localhost", 8004, "localhost", 9004),
     )
 
     cluster = nodes.map(n => ActorSystem(Node(n, nodes), n.name))

@@ -76,6 +76,21 @@ class DistributedHashTableTest extends AnyFlatSpec with Matchers with BeforeAndA
     list should be(Some(List(node3, node4, node5)))
   }
 
+  "preference list" should "return top N nodes circularly for small values" in {
+    val node1 = RingNode(BigInt(1), "localhost", 8000)
+    val node2 = RingNode(BigInt(10), "localhost", 8001)
+    val node3 = RingNode(BigInt(20), "localhost", 8002)
+    val node4 = RingNode(BigInt(60), "localhost", 8003)
+    val node5 = RingNode(BigInt(80), "localhost", 8004)
+
+    val ring = DistributedHashTable.createRing(List(node1, node2, node3, node4, node5))
+
+    val dht = testKit.spawn(DistributedHashTable(ring, 5))
+
+    val list = result(dht.ask(GetTopN(50, 4, _: ActorRef[Option[LazyList[RingNode]]])), 1.second)
+    list should be(Some(List(node4, node5, node1, node2)))
+  }
+
   "preference list" should "return top N nodes circularly" in {
     val node1 = RingNode(BigInt(1), "localhost", 8000)
     val node2 = RingNode(BigInt(100), "localhost", 8001)
