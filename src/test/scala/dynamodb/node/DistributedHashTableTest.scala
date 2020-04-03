@@ -25,7 +25,7 @@ class DistributedHashTableTest extends AnyFlatSpec with Matchers with BeforeAndA
     val res = DistributedHashTable.getHash("abc")
     val hash = MessageDigest.getInstance("MD5").digest("abc".getBytes)
     val hexString = DistributedHashTable.convertBytesToHex(hash)
-    res should be(BigInt(1))
+    res should be(BigInt(70))
   }
 
   "add node" should "add a node to the ring" in {
