@@ -1,9 +1,8 @@
+package dynamodb.node
+
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.cluster.VectorClock
-
-import scala.collection.immutable.TreeMap
-
 
 // Definition of a build job and its possible status values
 object ValueRepository {
@@ -43,7 +42,7 @@ object ValueRepository {
           Behaviors.same
         case None =>
           replyTo ! OK
-          ValueRepository(nodeName, values.+(value.key -> Value(value.key, value.value, value.version.merge(new VectorClock(TreeMap(nodeName -> 0))))))
+          ValueRepository(nodeName, values.+(value.key -> Value(value.key, value.value, value.version)))
       }
     case GetValueByKey(id, replyTo) =>
       replyTo ! values.get(id)

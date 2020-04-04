@@ -1,12 +1,14 @@
-import InternalClient.{Get, KO, Put, ValueRes}
+package dynamodb.node
+
 import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.util.Timeout
+import dynamodb.node.InternalClient.{Get, KO, Put, ValueRes}
 
-import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 
 class ExternalRoutes(buildValueRepository: ActorRef[ValueRepository.Command], internalClient: ActorRef[InternalClient.Command])(implicit system: ActorSystem[_]) {
   import JsonSupport._
@@ -34,7 +36,7 @@ class ExternalRoutes(buildValueRepository: ActorRef[ValueRepository.Command], in
             },
             delete {
               val operationPerformed: Future[ValueRepository.Response] =
-                buildValueRepository.ask(ValueRepository.ClearValues(_))
+                buildValueRepository.ask(ValueRepository.ClearValues)
               onSuccess(operationPerformed) {
                 case ValueRepository.OK => complete("Values cleared")
                 case ValueRepository.KO(reason) => complete(StatusCodes.InternalServerError -> reason)
@@ -52,8 +54,7 @@ class ExternalRoutes(buildValueRepository: ActorRef[ValueRepository.Command], in
         (get & path(Remaining)) { id =>
           val getResult = internalClient.ask(Get(id, _: ActorRef[InternalClient.Response]))
           onSuccess(getResult) {
-
-            case ValueRes(value) => complete(value.value)
+            case ValueRes(value) => complete(value)
             case KO(reason) => complete(StatusCodes.InternalServerError -> reason)
           }
         }

@@ -1,4 +1,5 @@
-import ValueRepository.{KO, OK, Value}
+package dynamodb.node
+
 import akka.actor
 import akka.actor.testkit.typed.scaladsl.ActorTestKit
 import akka.actor.typed.scaladsl.Behaviors
@@ -8,12 +9,13 @@ import akka.cluster.VectorClock
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
+import dynamodb.node.ValueRepository.{KO, OK, Value}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
 class HttpSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with ScalatestRouteTest {
-  import JsonSupport._
+  import dynamodb.node.JsonSupport._
 
   lazy val testKit: ActorTestKit = ActorTestKit()
 
@@ -23,7 +25,7 @@ class HttpSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with Sca
 
   val valueRepository: ActorRef[ValueRepository.Command] = testKit.spawn(ValueRepository(""))
   val dht: ActorRef[DistributedHashTable.Command] = testKit.spawn(DistributedHashTable())
-  val internalClient: ActorRef[InternalClient.Command] = testKit.spawn(InternalClient(valueRepository, dht, "", 0, 4, 3, 2))
+  val internalClient: ActorRef[InternalClient.Command] = testKit.spawn(InternalClient(valueRepository, dht, "", 0, 4, 3, 2, ""))
 
   lazy val routes: Route = new ExternalRoutes(valueRepository, internalClient).theValueRoutes
 
@@ -75,7 +77,7 @@ class HttpSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with Sca
       val mockedPublisher = testKit.spawn(Behaviors.monitor(probe.ref, mockedBehavior))
       val dht = testKit.spawn(DistributedHashTable())
 
-      val internalClient = testKit.spawn(InternalClient(valueRepository, dht, "", 0, 4, 2, 1))
+      val internalClient = testKit.spawn(InternalClient(valueRepository, dht, "", 0, 4, 2, 1, ""))
       val routes = new ExternalRoutes(mockedPublisher, internalClient).theValueRoutes
 
       Delete("/values/myKey") ~> routes ~> check {
@@ -95,7 +97,7 @@ class HttpSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with Sca
       val mockedPublisher = testKit.spawn(Behaviors.monitor(probe.ref, mockedBehavior))
       val dht = testKit.spawn(DistributedHashTable())
 
-      val internalClient = testKit.spawn(InternalClient(valueRepository, dht, "", 0, 4, 2, 1))
+      val internalClient = testKit.spawn(InternalClient(valueRepository, dht, "", 0, 4, 2, 1, ""))
 
       val routes = new ExternalRoutes(mockedPublisher, internalClient).theValueRoutes
 

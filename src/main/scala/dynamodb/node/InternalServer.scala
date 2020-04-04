@@ -1,3 +1,5 @@
+package dynamodb.node
+
 import akka.actor
 import akka.actor.typed.scaladsl.adapter._
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
@@ -23,7 +25,6 @@ class InternalServer(context: ActorContext[InternalServer.Command], valueReposit
   extends AbstractBehavior[InternalServer.Command](context) {
 
   import InternalServer._
-  import JsonSupport._
 
   implicit val actorSystem: ActorSystem[Nothing] = context.system
   implicit val classicActorSystem: actor.ActorSystem = context.system.toClassic

@@ -1,6 +1,8 @@
-import Node.Stop
+package dynamodb.node
+
 import akka.actor.typed.ActorSystem
-import main.NodeConfig
+import dynamodb.node.Node.Stop
+import dynamodb.node.mainObj.NodeConfig
 import org.scalatest.BeforeAndAfter
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -37,12 +39,12 @@ class ClusterSpec extends AnyWordSpec with Matchers with BeforeAndAfter {
       // This host should know about it
       Http("http://localhost:8001/values/myKey")
         .asString
-        .body should be ("myValue")
+        .body should be ("{\"key\":\"myKey\",\"value\":\"myValue\",\"version\":{\"node1\":0}}")
 
       // It should be replicated here
       Http("http://localhost:8002/values/myKey")
         .asString
-        .body should be ("myValue")
+        .body should be ("{\"key\":\"myKey\",\"value\":\"myValue\",\"version\":{\"node1\":0}}")
     }
   }
 }

@@ -1,9 +1,11 @@
-import DistributedHashTable.{AddNode, Response}
+package dynamodb.node
+
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{Behavior, Scheduler}
 import akka.http.scaladsl.Http.ServerBinding
 import akka.util.Timeout
-import main.NodeConfig
+import dynamodb.node.DistributedHashTable.{AddNode, Response}
+import dynamodb.node.mainObj.NodeConfig
 
 import scala.concurrent.duration._
 
@@ -32,7 +34,7 @@ object Node {
     val dht = ctx.spawn(DistributedHashTable(), "DistributedHashTable")
 
     for (node <- allNodes) {
-      dht ! AddNode(RingNode(node.position, node.internalHost, node.internalPort), ctx.system.ignoreRef[Response])
+      dht ! AddNode(RingNode(node.position, node.internalHost, node.internalPort, node.externalHost, node.externalPort), ctx.system.ignoreRef[Response])
     }
 
     val buildValueRepository = ctx.spawn(ValueRepository(config.name), "ValueRepository")
@@ -40,7 +42,7 @@ object Node {
     val N:Int = 3
     val R:Int = N - 1
     val W:Int = N
-    val internalClient = ctx.spawn(InternalClient(buildValueRepository, dht, config.internalHost, config.internalPort, N, R, W), "InternalClient")
+    val internalClient = ctx.spawn(InternalClient(buildValueRepository, dht, config.internalHost, config.internalPort, N, R, W, config.name), "InternalClient")
 
     val internalServer = ctx.spawn(InternalServer(buildValueRepository, config.internalHost, config.internalPort), "InternalServer")
     val externalServer = ctx.spawn(ExternalServer(buildValueRepository, internalClient, config.externalHost, config.externalPort), "ExternalServer")
