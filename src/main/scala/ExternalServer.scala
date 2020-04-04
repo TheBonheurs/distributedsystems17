@@ -24,14 +24,14 @@ class ExternalServer(context: ActorContext[ExternalServer.Command], valueReposit
 
   import ExternalServer._
 
-  implicit val actorSystem: typed.ActorSystem[Nothing] = context.system;
-  implicit val classicActorSystem: ActorSystem = context.system.toClassic;
+  implicit val actorSystem: typed.ActorSystem[Nothing] = context.system
+  implicit val classicActorSystem: ActorSystem = context.system.toClassic
   implicit val materializer: Materializer = Materializer(classicActorSystem)
 
   val routes = new ExternalRoutes(valueRepository, internalClient)
 
-  var started = false;
-  var binding: ServerBinding = _;
+  var started = false
+  var binding: ServerBinding = _
 
   val serverBinding: Future[Http.ServerBinding] =
     Http.apply().bindAndHandle(routes.theValueRoutes, host, port)
@@ -45,7 +45,7 @@ class ExternalServer(context: ActorContext[ExternalServer.Command], valueReposit
     msg match {
       case Started(binding) =>
         started = true
-        this.binding = binding;
+        this.binding = binding
         context.log.info(
           "Internal server online at http://{}:{}/",
           binding.localAddress.getHostString,

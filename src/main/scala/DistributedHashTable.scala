@@ -60,7 +60,7 @@ object DistributedHashTable {
     // We need to convert it to a hex string in order to make it unsigned
     val hexString = DistributedHashTable.convertBytesToHex(hash)
     // Radix 16 because we use hex
-    BigInt(hexString, 16)
+    BigInt(hexString, 16) % 100
   }
 
   // Helper method that converts bytes to a hex string

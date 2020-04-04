@@ -1,4 +1,4 @@
-import InternalClient.{Get, Put}
+import InternalClient.{Get, KO, Put, ValueRes}
 import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives._
@@ -26,9 +26,9 @@ class ExternalRoutes(buildValueRepository: ActorRef[ValueRepository.Command], in
               entity(as[ValueRepository.Value]) { job =>
                 val putResult = internalClient.ask(Put(job, _: ActorRef[InternalClient.Response]))
                 onSuccess(putResult) {
-                  case InternalClient.ValueRes(_) => complete(StatusCodes.InternalServerError)
+                  case InternalClient.ValueRes(_) => complete(StatusCodes.OK -> "Value added")
                   case InternalClient.OK => complete("Value added")
-                  case InternalClient.KO => complete(StatusCodes.InternalServerError)
+                  case InternalClient.KO(reason) => complete(StatusCodes.InternalServerError -> reason)
                 }
               }
             },
@@ -50,8 +50,12 @@ class ExternalRoutes(buildValueRepository: ActorRef[ValueRepository.Command], in
           }
         },
         (get & path(Remaining)) { id =>
-          val getResult = internalClient.ask(Get(id, _: ActorRef[InternalClient.ValueRes]))
-          onSuccess(getResult)(v => complete(v.value))
+          val getResult = internalClient.ask(Get(id, _: ActorRef[InternalClient.Response]))
+          onSuccess(getResult) {
+
+            case ValueRes(value) => complete(value.value)
+            case KO(reason) => complete(StatusCodes.InternalServerError -> reason)
+          }
         }
       )
     }

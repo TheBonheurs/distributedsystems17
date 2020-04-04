@@ -1,6 +1,6 @@
 import DistributedHashTable.{AddNode, Response}
-import akka.actor.typed.{ActorRef, Behavior, Scheduler}
 import akka.actor.typed.scaladsl.Behaviors
+import akka.actor.typed.{Behavior, Scheduler}
 import akka.http.scaladsl.Http.ServerBinding
 import akka.util.Timeout
 import main.NodeConfig
