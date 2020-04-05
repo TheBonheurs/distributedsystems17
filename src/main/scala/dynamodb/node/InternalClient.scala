@@ -19,8 +19,7 @@ import scala.collection.immutable.TreeMap
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.concurrent.impl.Promise
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 
 object InternalClient {
   def apply(valueRepository: ActorRef[ValueRepository.Command], dht: ActorRef[DistributedHashTable.Command], host: String, port: Int, n: Int, r: Int, w: Int, nodeName: String): Behavior[Command] =
@@ -71,33 +70,21 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
   var W: Int = w
 
   /**
-   * Helper method for converting futures to future try
-   * See: https://stackoverflow.com/questions/20874186/scala-listfuture-to-futurelist-disregarding-failed-futures/20874404#20874404
-   *
-   * @param f Future to convert
-   * @tparam T Type of the future
-   * @return Future of type Try of type T
-   */
-  def futureToFutureTry[T](f: Future[T]): Future[Try[T]] =
-    f.map(Success(_)).recover(x => Failure(x))
-
-  /**
    * Method executed with get() operation
    *
    * @param key the key to get
    * @return the value of that key
    */
-  def read(key: String): Future[ValueRepository.Value] = {
-    for {
-      topN <- dht.ask(GetTopN(DistributedHashTable.getHash(key), N, _: ActorRef[Option[LazyList[RingNode]]]))
-      responses <- topN match {
-        case Some(topn) => Future.sequence(topn.map(n => getOtherNodes(key, Uri.from("http", "", n.host, n.port, "/internal/"))))
-        case _ => throw new Exception("Error getting top N nodes")
-      }
-      successfulResponses = responses.filter(response => response.status == StatusCodes.OK)
-      versions <- Future.sequence(successfulResponses.map(Unmarshal(_).to[ValueRepository.Value]))
-    } yield checkVersion(versions.toList)
-  }
+  def read(key: String): Future[ValueRepository.Value] = for {
+    otherNodesOption <- dht.ask(GetTopN(DistributedHashTable.getHash(key), N, _: ActorRef[Option[LazyList[RingNode]]]))
+    otherNodes = otherNodesOption match {
+      case Some(otherNodes) => otherNodes
+      case _ => throw new Exception("Error getting top N nodes")
+    }
+    responses <- Future.sequence(otherNodes.map(n => getOtherNodes(key, Uri.from("http", "", n.host, n.port, "/internal/"))))
+    successfulResponses = responses.filter(response => response.status == StatusCodes.OK)
+    versions <- Future.sequence(successfulResponses.map(Unmarshal(_).to[ValueRepository.Value]))
+  } yield checkVersion(versions.toList)
 
   /**
    * Write value to other nodes
@@ -105,26 +92,18 @@ class InternalClient(context: ActorContext[InternalClient.Command], valueReposit
    * @param v value to write
    * @return True if written to W - 1 other nodes successfully, false otherwise
    */
-  def write(v: ValueRepository.Value): Future[Boolean] = {
-    val getFuture = valueRepository.ask(GetValueByKey(v.key, _: ActorRef[Option[ValueRepository.Value]]))
-    val versionFuture = getFuture.map {
-      case Some(value) =>
-        val newVC = value.version.:+(nodeName)
-        ValueRepository.Value(v.key, v.value, newVC)
-      case None =>
-        val vectorClock = new VectorClock(TreeMap(nodeName -> 0))
-        ValueRepository.Value(v.key, v.value, vectorClock)
+  def write(v: ValueRepository.Value): Future[Boolean] = for {
+    valueOption <- valueRepository.ask(GetValueByKey(v.key, _: ActorRef[Option[ValueRepository.Value]]))
+    value = valueOption match {
+      case Some(value) => ValueRepository.Value(v.key, v.value, value.version :+ nodeName)
+      case None => ValueRepository.Value(v.key, v.value, new VectorClock(TreeMap(nodeName -> 0)))
     }
-    versionFuture.flatMap(value => {
-      for {
-        topN <- dht.ask(GetTopN(DistributedHashTable.getHash(value.key), N, _: ActorRef[Option[LazyList[RingNode]]]))
-        responses <- topN match {
-          case Some(topN) => Future.sequence(topN.map(node => putOtherNodes(value, Uri.from("http", "", node.host, node.port, "/internal"))))
-          case _ => throw new Exception("Error getting top N nodes")
-        }
-      } yield responses.count(r => r.status == StatusCodes.OK) >= W - 1
-    })
-  }
+    topN <- dht.ask(GetTopN(DistributedHashTable.getHash(value.key), N, _: ActorRef[Option[LazyList[RingNode]]]))
+    responses <- topN match {
+      case Some(topN) => Future.sequence(topN.map(node => putOtherNodes(value, Uri.from("http", "", node.host, node.port, "/internal"))))
+      case _ => throw new Exception("Error getting top N nodes")
+    }
+  } yield responses.count(r => r.status == StatusCodes.OK) >= W - 1
 
   /**
    * Send get request to server
