@@ -23,12 +23,14 @@ object UserMain {
     val putResult = system.ask(Put(ValueRepository.Value("test_key", "test_value", new VectorClock()), _: ActorRef[UserClient.Response]))
     putResult.map(f => {
       println(f)
-      val getResult = system.ask(Get("test_key", _: ActorRef[UserClient.Response]))
-      getResult.map(f => {
-        println(f)
+      val putResult2 = system.ask(Put(ValueRepository.Value("test_key", "test_value", new VectorClock()), _: ActorRef[UserClient.Response]))
+      putResult2.map( r => {
+        println(r)
+        val getResult = system.ask(Get("test_key", _: ActorRef[UserClient.Response]))
+        getResult.map(f => {
+          println(f)
+        })
       })
     })
-
-
   }
 }
