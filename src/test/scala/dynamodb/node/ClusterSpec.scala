@@ -114,5 +114,22 @@ class ClusterSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll {
       post(coordinatorUrl, "/values", s"""{"key": "rejectedKey", "value": "myRejectedValue", "version": {"${coordinator}": 1}}""")
         .code shouldBe 400
     }
+
+    "fail read after top N nodes timeout " in {
+      val coordinator = getCoordinatorUrlForKey("timeKey")
+      val coordinatorUrl = hostToUrl(coordinator)
+
+      post(coordinatorUrl, "/values", """{"key": "timeKey", "value": "1"}""")
+        .body shouldBe "Value added"
+
+      // THis should succeed
+      get(coordinatorUrl, "/values/timeKey")
+        .body should be(s"""{"key":"timeKey","value":"1","version":{"${coordinator}":0}}""")
+
+      cluster.head ! Node.Sleep(10000)
+      // This should fail
+      get(coordinatorUrl, "/values/timeKey")
+        .code shouldBe 200 // dit moet falen 
+    }
   }
 }

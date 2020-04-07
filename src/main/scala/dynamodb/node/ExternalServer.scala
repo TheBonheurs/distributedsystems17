@@ -19,6 +19,7 @@ object ExternalServer {
   final case class Started(binding: ServerBinding) extends Command
   final case class StartFailed(cause: Throwable) extends Command
   final case class Stop() extends  Command
+  final case class Sleep(millis: Int) extends Command
 }
 
 class ExternalServer(context: ActorContext[ExternalServer.Command], valueRepository: ActorRef[ValueRepository.Command], internalClient: ActorRef[InternalClient.Command], host: String, port: Int)
@@ -53,6 +54,10 @@ class ExternalServer(context: ActorContext[ExternalServer.Command], valueReposit
           binding.localAddress.getHostString,
           binding.localAddress.getPort)
 
+        this
+
+      case Sleep(x) =>
+        Thread.sleep(x)
         this
 
       case Stop() =>

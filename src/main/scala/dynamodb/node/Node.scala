@@ -14,6 +14,8 @@ object Node {
 
   sealed trait Message
 
+  final case class Sleep(millis: Int) extends Message
+
   private final case class StartFailed(cause: Throwable) extends Message
 
   private final case class Started(binding: ServerBinding) extends Message
@@ -25,6 +27,7 @@ object Node {
   private final case class StopExternal(binding: ServerBinding) extends Message
 
   case object Stop extends Message
+
 
   def apply(config: NodeConfig, allNodes: List[NodeConfig]): Behavior[Message] = Behaviors.setup { ctx =>
 
@@ -50,6 +53,10 @@ object Node {
 
     def starting(): Behaviors.Receive[Message] =
       Behaviors.receiveMessagePartial[Message] {
+        case Sleep(x) =>
+          internalServer ! InternalServer.Sleep(x)
+          externalServer ! ExternalServer.Sleep(x)
+          Behaviors.same
         case Stop =>
           internalServer ! InternalServer.Stop()
           externalServer ! ExternalServer.Stop()
