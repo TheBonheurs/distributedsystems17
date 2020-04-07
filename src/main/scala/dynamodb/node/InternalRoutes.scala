@@ -1,5 +1,6 @@
 package dynamodb.node
 
+import akka.actor.typed.scaladsl.ActorContext
 import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives._
@@ -9,7 +10,7 @@ import akka.util.Timeout
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class InternalRoutes(buildValueRepository: ActorRef[ValueRepository.Command])(implicit system: ActorSystem[_]) {
+class InternalRoutes(buildValueRepository: ActorRef[ValueRepository.Command], nodeName: String)(implicit system: ActorSystem[_]) {
   import JsonSupport._
   import akka.actor.typed.scaladsl.AskPattern._
 
@@ -23,6 +24,9 @@ class InternalRoutes(buildValueRepository: ActorRef[ValueRepository.Command])(im
         pathEnd {
             post {
               entity(as[ValueRepository.Value]) { job =>
+                system.log.info(
+                  "Received put request at internal server {}: value = {}",
+                  nodeName, job.toString)
                 val operationPerformed: Future[ValueRepository.Response] =
                   buildValueRepository.ask(ValueRepository.AddValue(job, _))
                 onSuccess(operationPerformed) {
@@ -33,6 +37,9 @@ class InternalRoutes(buildValueRepository: ActorRef[ValueRepository.Command])(im
             }
         },
         (get & path(Remaining)) { id =>
+          system.log.info(
+            "Received get request at internal server {}: id = {}",
+            nodeName, id)
           val maybeValue: Future[Option[ValueRepository.Value]] =
             buildValueRepository.ask(ValueRepository.GetValueByKey(id, _))
           rejectEmptyResponse {

@@ -12,8 +12,8 @@ import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
 object InternalServer {
-  def apply(valueRepository: ActorRef[ValueRepository.Command], host: String, port: Int): Behavior[Command] =
-    Behaviors.setup(context => new InternalServer(context, valueRepository, host, port))
+  def apply(valueRepository: ActorRef[ValueRepository.Command], host: String, port: Int, nodeName: String): Behavior[Command] =
+    Behaviors.setup(context => new InternalServer(context, valueRepository, host, port, nodeName))
 
   sealed trait Command
   final case class Started(binding: ServerBinding) extends Command
@@ -21,7 +21,7 @@ object InternalServer {
   final case class Stop() extends Command
 }
 
-class InternalServer(context: ActorContext[InternalServer.Command], valueRepository: ActorRef[ValueRepository.Command], host: String, port: Int)
+class InternalServer(context: ActorContext[InternalServer.Command], valueRepository: ActorRef[ValueRepository.Command], host: String, port: Int, nodeName: String)
   extends AbstractBehavior[InternalServer.Command](context) {
 
   import InternalServer._
@@ -30,7 +30,7 @@ class InternalServer(context: ActorContext[InternalServer.Command], valueReposit
   implicit val classicActorSystem: actor.ActorSystem = context.system.toClassic
   implicit val materializer: Materializer = Materializer(classicActorSystem)
 
-  val internalRoutes = new InternalRoutes(valueRepository)
+  val internalRoutes = new InternalRoutes(valueRepository, nodeName)
 
   var started = false
   var binding: ServerBinding = _

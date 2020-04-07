@@ -40,7 +40,7 @@ object InternalClient {
             case None => ValueRepository.Value(value.key, value.value, new VectorClock(TreeMap(nodeName -> 0)))
           }
           otherNodes <- getTopNByKey(internalValue.key, numNodes)
-          responses <- Future.sequence(otherNodes.map(node => putOtherNodes(internalValue, Uri.from("http", "", node.host, node.port, "/internal"))))
+          responses <- Future.sequence(otherNodes.map(node => putOtherNodes(internalValue, Uri.from("http", "", node.host, node.port, "/internal"), node.nodeName)))
         } yield if (responses.count(r => r.status == StatusCodes.OK) >= numWriteMinimum - 1) {
           replyTo ! OK
         } else {
@@ -52,7 +52,7 @@ object InternalClient {
       case Get(key, replyTo) =>
         (for {
           otherNodes <- getTopNByKey(key, numNodes)
-          responses <- Future.sequence(otherNodes.map(n => getOtherNodes(key, Uri.from("http", "", n.host, n.port, "/internal/"))))
+          responses <- Future.sequence(otherNodes.map(n => getOtherNodes(key, Uri.from("http", "", n.host, n.port, "/internal/"), n.nodeName)))
           numFailedResponses = responses.count(_.isEmpty)
           versions = responses.flatten
         } yield if (numFailedResponses > numReadMinimum) {
@@ -83,9 +83,10 @@ object InternalClient {
    * @param address address of the server
    * @return Http Response
    */
-  def getOtherNodes[T](key: String, address: Uri)(implicit actorSystem: actor.ActorSystem, mat: Materializer): Future[Option[ValueRepository.Value]] = {
+  def getOtherNodes[T](key: String, address: Uri, nodeName: String)(implicit actorSystem: actor.ActorSystem, mat: Materializer): Future[Option[ValueRepository.Value]] = {
     import JsonSupport._
-
+    actorSystem.log.info("Send internal get request to {}: id = {}",
+      nodeName, key)
     try for {
       response <- Http().singleRequest(HttpRequest(uri = address + key))
       _ <- if (response.status != StatusCodes.OK) Future.failed(new Exception("Empty value")) else Future.successful()
@@ -119,10 +120,11 @@ object InternalClient {
    * @param address address of the server
    * @return
    */
-  def putOtherNodes(value: ValueRepository.Value, address: Uri)(implicit actorSystem: actor.ActorSystem): Future[HttpResponse] = {
+  def putOtherNodes(value: ValueRepository.Value, address: Uri, nodeName: String)(implicit actorSystem: actor.ActorSystem): Future[HttpResponse] = {
     import JsonSupport._
     import spray.json._
-
+    actorSystem.log.info("Send put request to {}: Value = {}",
+      nodeName, value.toString)
     Http().singleRequest(HttpRequest(
       method = HttpMethods.POST,
       uri = address,
