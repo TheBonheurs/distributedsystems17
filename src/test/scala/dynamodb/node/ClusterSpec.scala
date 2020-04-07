@@ -40,7 +40,7 @@ class ClusterSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll {
     cluster = nodes.map(n => ActorSystem(Node(n, nodes), n.name))
 
     // ActorSytem needs some time to boot, nothing implemented yet to check this.
-    Thread.sleep(1000)
+    Thread.sleep(2400)
   }
 
   override def afterAll {
@@ -94,20 +94,24 @@ class ClusterSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll {
 
       post(coordinatorUrl, "/values", """{"key": "updateKey", "value": "myValue"}""")
         .body shouldBe "Value added"
-      post(coordinatorUrl, "/values", s"""{"key": "updateKey", "value": "myOverrideValue", "version": {"${coordinator}": 1}}""")
+      post(coordinatorUrl, "/values", s"""{"key": "updateKey", "value": "myOverrideValue", "version": {"${coordinator}": 0}}""")
         .body shouldBe "Value added"
 
       get(coordinatorUrl, "/values/updateKey")
         .body should be(s"""{"key":"updateKey","value":"myOverrideValue","version":{"${coordinator}":1}}""")
     }
 
-    "reject overriding a value without version" in {
+    "reject overriding a value with wrong version" in {
       val coordinator = getCoordinatorUrlForKey("rejectedKey")
       val coordinatorUrl = hostToUrl(coordinator)
 
       post(coordinatorUrl, "/values", """{"key": "rejectedKey", "value": "myValue"}""")
           .body shouldBe "Value added"
-      post(coordinatorUrl, "/values", """{"key": "rejectedKey", "value": "myValue"}""")
+      post(coordinatorUrl, "/values", s"""{"key": "rejectedKey", "value": "myUpdatedValue", "version": {"${coordinator}": 0}}""")
+        .body shouldBe "Value added"
+      post(coordinatorUrl, "/values", s"""{"key": "rejectedKey", "value": "myOtherUpdatedValue", "version": {"${coordinator}": 1}}""")
+        .body shouldBe "Value added"
+      post(coordinatorUrl, "/values", s"""{"key": "rejectedKey", "value": "myRejectedValue", "version": {"${coordinator}": 1}}""")
         .code shouldBe 400
     }
   }
