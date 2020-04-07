@@ -30,13 +30,13 @@ class DistributedHashTableTest extends AnyFlatSpec with Matchers with BeforeAndA
   }
 
   "add node" should "add a node to the ring" in {
-    val node1 = RingNode(BigInt(1), "localhost", 8000, "localhost", 9000)
+    val node1 = RingNode(BigInt(1), "localhost", 8000, "localhost", 9000, "node")
 
     val ring = DistributedHashTable.createRing(List(node1))
 
     val dht = testKit.spawn(DistributedHashTable(ring, 1))
 
-    val node2 = RingNode(BigInt(10), "localhost", 8001, "localhost", 9001)
+    val node2 = RingNode(BigInt(10), "localhost", 8001, "localhost", 9001, "node")
 
     result(dht.ask(AddNode(node2, _: ActorRef[Response])), 1.second) should be(OK)
 
@@ -47,10 +47,10 @@ class DistributedHashTableTest extends AnyFlatSpec with Matchers with BeforeAndA
   }
 
   "nodes" should "be ordered" in {
-    val node1 = RingNode(BigInt(1), "localhost", 8000, "localhost", 9000)
-    val node2 = RingNode(BigInt(2), "localhost", 8000, "localhost", 9000)
-    val node3 = RingNode(BigInt(3), "localhost", 8000, "localhost", 9000)
-    val node4 = RingNode(BigInt(4), "localhost", 8000, "localhost", 9000)
+    val node1 = RingNode(BigInt(1), "localhost", 8000, "localhost", 9000, "node")
+    val node2 = RingNode(BigInt(2), "localhost", 8000, "localhost", 9000, "node")
+    val node3 = RingNode(BigInt(3), "localhost", 8000, "localhost", 9000, "node")
+    val node4 = RingNode(BigInt(4), "localhost", 8000, "localhost", 9000, "node")
 
     val dht = testKit.spawn(DistributedHashTable())
 
@@ -65,11 +65,11 @@ class DistributedHashTableTest extends AnyFlatSpec with Matchers with BeforeAndA
   }
 
   "preference list" should "return top N nodes" in {
-    val node1 = RingNode(BigInt(1), "localhost", 8000, "localhost", 9000)
-    val node2 = RingNode(BigInt(100), "localhost", 8001, "localhost", 9001)
-    val node3 = RingNode(BigInt(200), "localhost", 8002, "localhost", 9002)
-    val node4 = RingNode(BigInt(300), "localhost", 8003, "localhost", 9003)
-    val node5 = RingNode(BigInt(400), "localhost", 8004, "localhost", 9004)
+    val node1 = RingNode(BigInt(1), "localhost", 8000, "localhost", 9000, "node")
+    val node2 = RingNode(BigInt(100), "localhost", 8001, "localhost", 9001, "node")
+    val node3 = RingNode(BigInt(200), "localhost", 8002, "localhost", 9002, "node")
+    val node4 = RingNode(BigInt(300), "localhost", 8003, "localhost", 9003, "node")
+    val node5 = RingNode(BigInt(400), "localhost", 8004, "localhost", 9004, "node")
 
     val ring = DistributedHashTable.createRing(List(node1, node2, node3, node4, node5))
 
@@ -80,11 +80,11 @@ class DistributedHashTableTest extends AnyFlatSpec with Matchers with BeforeAndA
   }
 
   "preference list" should "return top N nodes circularly for small values" in {
-    val node1 = RingNode(BigInt(1), "localhost", 8000, "localhost", 9000)
-    val node2 = RingNode(BigInt(10), "localhost", 8001, "localhost", 9001)
-    val node3 = RingNode(BigInt(20), "localhost", 8002, "localhost", 9002)
-    val node4 = RingNode(BigInt(60), "localhost", 8003, "localhost", 9003)
-    val node5 = RingNode(BigInt(80), "localhost", 8004, "localhost", 9004)
+    val node1 = RingNode(BigInt(1), "localhost", 8000, "localhost", 9000, "node")
+    val node2 = RingNode(BigInt(10), "localhost", 8001, "localhost", 9001, "node")
+    val node3 = RingNode(BigInt(20), "localhost", 8002, "localhost", 9002, "node")
+    val node4 = RingNode(BigInt(60), "localhost", 8003, "localhost", 9003, "node")
+    val node5 = RingNode(BigInt(80), "localhost", 8004, "localhost", 9004, "node")
 
     val ring = DistributedHashTable.createRing(List(node1, node2, node3, node4, node5))
 
@@ -95,11 +95,11 @@ class DistributedHashTableTest extends AnyFlatSpec with Matchers with BeforeAndA
   }
 
   "preference list" should "return top N nodes circularly" in {
-    val node1 = RingNode(BigInt(1), "localhost", 8000, "localhost", 9000)
-    val node2 = RingNode(BigInt(100), "localhost", 8001, "localhost", 9001)
-    val node3 = RingNode(BigInt(200), "localhost", 8002, "localhost", 9002)
-    val node4 = RingNode(BigInt(300), "localhost", 8003, "localhost", 9003)
-    val node5 = RingNode(BigInt(400), "localhost", 8004, "localhost", 9004)
+    val node1 = RingNode(BigInt(1), "localhost", 8000, "localhost", 9000, "node")
+    val node2 = RingNode(BigInt(100), "localhost", 8001, "localhost", 9001, "node")
+    val node3 = RingNode(BigInt(200), "localhost", 8002, "localhost", 9002, "node")
+    val node4 = RingNode(BigInt(300), "localhost", 8003, "localhost", 9003, "node")
+    val node5 = RingNode(BigInt(400), "localhost", 8004, "localhost", 9004, "node")
 
     val ring = DistributedHashTable.createRing(List(node1, node2, node3, node4, node5))
 
@@ -110,8 +110,8 @@ class DistributedHashTableTest extends AnyFlatSpec with Matchers with BeforeAndA
   }
 
   "preference list" should "throw an error if hash is too large" in {
-    val node1 = RingNode(BigInt(1), "localhost", 8000, "localhost", 9000)
-    val node2 = RingNode(BigInt(100), "localhost", 8001, "localhost", 9001)
+    val node1 = RingNode(BigInt(1), "localhost", 8000, "localhost", 9000, "node")
+    val node2 = RingNode(BigInt(100), "localhost", 8001, "localhost", 9001, "node")
 
     val ring = DistributedHashTable.createRing(List(node1, node2))
 

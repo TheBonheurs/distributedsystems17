@@ -35,14 +35,14 @@ object Node {
     implicit val dht: ActorRef[DistributedHashTable.Command] = ctx.spawn(DistributedHashTable(), "DistributedHashTable")
 
     for (node <- allNodes) {
-      dht ! AddNode(RingNode(node.position, node.internalHost, node.internalPort, node.externalHost, node.externalPort), ctx.system.ignoreRef[Response])
+      dht ! AddNode(RingNode(node.position, node.internalHost, node.internalPort, node.externalHost, node.externalPort, node.name), ctx.system.ignoreRef[Response])
     }
 
     implicit val buildValueRepository: ActorRef[ValueRepository.Command] = ctx.spawn(ValueRepository(config.name), "ValueRepository")
 
     val internalClient = ctx.spawn(InternalClient(config.internalHost, config.internalPort, clusterConfig.numReplicas, clusterConfig.numReadMinimum, clusterConfig.numWriteMinimum, config.name), "InternalClient")
 
-    val internalServer = ctx.spawn(InternalServer(buildValueRepository, config.internalHost, config.internalPort), "InternalServer")
+    val internalServer = ctx.spawn(InternalServer(buildValueRepository, config.internalHost, config.internalPort, config.name), "InternalServer")
     val externalServer = ctx.spawn(ExternalServer(buildValueRepository, internalClient, config.externalHost, config.externalPort), "ExternalServer")
 
     def starting(): Behaviors.Receive[Message] =

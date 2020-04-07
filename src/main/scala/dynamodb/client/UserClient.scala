@@ -41,7 +41,7 @@ object UserClient {
     Behaviors.setup { ctx =>
       val dht: ActorRef[DistributedHashTable.Command] = ctx.spawn(DistributedHashTable(), "DistributedHashTable")
       for (node <- nodes) {
-        dht ! AddNode(RingNode(node.position, node.internalHost, node.internalPort, node.externalHost, node.externalPort), ctx.system.ignoreRef[DistributedHashTable.Response])
+        dht ! AddNode(RingNode(node.position, node.internalHost, node.internalPort, node.externalHost, node.externalPort, node.name), ctx.system.ignoreRef[DistributedHashTable.Response])
       }
       new UserClient(ctx, dht)
       // url: ("http://localhost:8001/values")
