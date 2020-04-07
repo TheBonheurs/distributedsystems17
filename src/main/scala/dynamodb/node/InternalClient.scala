@@ -31,15 +31,21 @@ object InternalClient {
     command match {
       case Put(value, replyTo) =>
         try for {
-          internalValue <- retrieveValueFromRepository(value, nodeName)
-          otherNodes <- getTopNByKey(internalValue.key, numNodes)
-          responses <- Future.sequence(otherNodes.map(node => putOtherNodes(internalValue, Uri.from("http", "", node.host, node.port, "/internal"))))
-        } yield if (responses.count(r => r.status == StatusCodes.OK) >= numWriteMinimum - 1) {
-          replyTo ! OK
+          internalValue <- retrieveRawValueFromRepository(value, nodeName)
+        } yield if ((!internalValue.version.versions.get(nodeName).contains(0)).&&(internalValue.version.!=(value.version))) {
+          replyTo ! KO("Version mismatch: server = {}, request = {}".format(internalValue.version, value.version))
         } else {
-          replyTo ! KO("Not enough writes")
-        } catch {
-          case e: Exception => replyTo ! KO(e.getMessage)
+          try for {
+            internalValue <- retrieveValueFromRepository(value, nodeName)
+            otherNodes <- getTopNByKey(internalValue.key, numNodes)
+            responses <- Future.sequence(otherNodes.map(node => putOtherNodes(internalValue, Uri.from("http", "", node.host, node.port, "/internal"))))
+          } yield if (responses.count(r => r.status == StatusCodes.OK) >= numWriteMinimum - 1) {
+            replyTo ! OK
+          } else {
+            replyTo ! KO("Not enough writes")
+          } catch {
+            case e: Exception => replyTo ! KO(e.getMessage)
+          }
         }
         Behaviors.same
       case Get(key, replyTo) =>
@@ -58,6 +64,15 @@ object InternalClient {
         Behaviors.same
     }
   }
+
+
+  def retrieveRawValueFromRepository(previousValue: ValueRepository.Value, nodeName: String)(implicit valueRepository: ActorRef[ValueRepository.Command], timeout: Timeout, scheduler: Scheduler): Future[ValueRepository.Value] =
+    for {
+      internalValueOption <- valueRepository.ask(GetValueByKey(previousValue.key, _: ActorRef[Option[ValueRepository.Value]]))
+    } yield internalValueOption match {
+      case Some(value) => ValueRepository.Value(value.key, value.value, value.version)
+      case None => ValueRepository.Value(previousValue.key, previousValue.value, new VectorClock(TreeMap(nodeName -> 0)))
+    }
 
   def retrieveValueFromRepository(previousValue: ValueRepository.Value, nodeName: String)(implicit valueRepository: ActorRef[ValueRepository.Command], timeout: Timeout, scheduler: Scheduler): Future[ValueRepository.Value] =
     for {

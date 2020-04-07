@@ -26,6 +26,15 @@ object UserMain {
       val getResult = system.ask(Get("test_key", _: ActorRef[UserClient.Response]))
       getResult.map(f => {
         println(f)
+        f match {
+          case UserClient.ValueRes(value) =>
+            val putResult2 = system.ask(Put(ValueRepository.Value("test_key", "test_value2", value.version), _: ActorRef[UserClient.Response]))
+            putResult2.map(r => {
+            println(r)
+          })
+          case UserClient.OK =>
+          case UserClient.KO(reason) =>
+        }
       })
     })
 
