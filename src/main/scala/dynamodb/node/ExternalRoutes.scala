@@ -29,7 +29,7 @@ class ExternalRoutes(buildValueRepository: ActorRef[ValueRepository.Command], in
                 val putResult = internalClient.ask(Put(job, _: ActorRef[InternalClient.Response]))
                 onSuccess(putResult) {
                   case InternalClient.OK => complete("Value added")
-                  case InternalClient.KO(reason) => complete(StatusCodes.InternalServerError -> reason)
+                  case InternalClient.KO(reason) => complete(StatusCodes.BadRequest -> reason)
                 }
               }
             }
@@ -39,7 +39,7 @@ class ExternalRoutes(buildValueRepository: ActorRef[ValueRepository.Command], in
           val getResult = internalClient.ask(Get(id, _: ActorRef[InternalClient.Response]))
           onSuccess(getResult) {
             case ValueRes(value) => complete(value)
-            case KO(reason) => complete(StatusCodes.InternalServerError -> reason)
+            case KO(reason) => complete(StatusCodes.BadRequest -> reason)
           }
         }
       )

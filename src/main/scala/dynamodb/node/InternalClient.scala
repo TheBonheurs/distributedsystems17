@@ -1,5 +1,7 @@
 package dynamodb.node
 
+import java.lang.Exception
+
 import akka.actor
 import akka.actor.typed.scaladsl.AskPattern._
 import akka.actor.typed.scaladsl.Behaviors
@@ -30,20 +32,25 @@ object InternalClient {
 
     command match {
       case Put(value, replyTo) =>
-        try for {
-          internalValue <- retrieveValueFromRepository(value, nodeName)
+        (for {
+          internalValueOption <- retrieveValueFromRepository(value, nodeName)
+          _ <- if (internalValueOption.isDefined && value.version < internalValueOption.get.version) Future.failed(new Exception("Version too old")) else Future.successful()
+          internalValue = internalValueOption match {
+            case Some(internalValue) => ValueRepository.Value(value.key, value.value, internalValue.version :+ nodeName)
+            case None => ValueRepository.Value(value.key, value.value, new VectorClock(TreeMap(nodeName -> 0)))
+          }
           otherNodes <- getTopNByKey(internalValue.key, numNodes)
           responses <- Future.sequence(otherNodes.map(node => putOtherNodes(internalValue, Uri.from("http", "", node.host, node.port, "/internal"))))
         } yield if (responses.count(r => r.status == StatusCodes.OK) >= numWriteMinimum - 1) {
           replyTo ! OK
         } else {
           replyTo ! KO("Not enough writes")
-        } catch {
+        }).recover {
           case e: Exception => replyTo ! KO(e.getMessage)
         }
         Behaviors.same
       case Get(key, replyTo) =>
-        try for {
+        (for {
           otherNodes <- getTopNByKey(key, numNodes)
           responses <- Future.sequence(otherNodes.map(n => getOtherNodes(key, Uri.from("http", "", n.host, n.port, "/internal/"))))
           numFailedResponses = responses.count(response => response.isEmpty)
@@ -52,20 +59,17 @@ object InternalClient {
           replyTo ! KO("Not enough reads")
         } else {
           replyTo ! ValueRes(checkVersion(versions.toList))
-        } catch {
+        }).recover {
           case e: Exception => replyTo ! KO(e.getMessage)
         }
         Behaviors.same
     }
   }
 
-  def retrieveValueFromRepository(previousValue: ValueRepository.Value, nodeName: String)(implicit valueRepository: ActorRef[ValueRepository.Command], timeout: Timeout, scheduler: Scheduler): Future[ValueRepository.Value] =
+  def retrieveValueFromRepository(previousValue: ValueRepository.Value, nodeName: String)(implicit valueRepository: ActorRef[ValueRepository.Command], timeout: Timeout, scheduler: Scheduler): Future[Option[ValueRepository.Value]] =
     for {
       internalValueOption <- valueRepository.ask(GetValueByKey(previousValue.key, _: ActorRef[Option[ValueRepository.Value]]))
-    } yield internalValueOption match {
-      case Some(value) => ValueRepository.Value(value.key, value.value, value.version :+ nodeName)
-      case None => ValueRepository.Value(previousValue.key, previousValue.value, new VectorClock(TreeMap(nodeName -> 0)))
-    }
+    } yield internalValueOption
 
   def getTopNByKey(key: String, numNodes: Int)(implicit dht: ActorRef[DistributedHashTable.Command], timeout: Timeout, scheduler: Scheduler): Future[Ring] =
     for {
@@ -84,7 +88,8 @@ object InternalClient {
 
     try for {
       response <- Http().singleRequest(HttpRequest(uri = address + key))
-      value <- if (response.status == StatusCodes.OK) Unmarshal(response).to[ValueRepository.Value] else throw new Exception("Empty value")
+      _ <- if (response.status != StatusCodes.OK) Future.failed(new Exception("Empty value")) else Future.successful()
+      value <- Unmarshal(response).to[ValueRepository.Value]
     } yield Some(value) catch {
       case _: Exception => Future {
         None
