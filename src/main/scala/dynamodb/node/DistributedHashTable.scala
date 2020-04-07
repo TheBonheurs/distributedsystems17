@@ -4,6 +4,7 @@ import java.security.MessageDigest
 
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
+import dynamodb.node.ring.{RingNode, Ring}
 
 import scala.collection.immutable.LinearSeq
 
@@ -20,9 +21,9 @@ object DistributedHashTable {
 
   final case class ResetRing(replyTo: ActorRef[Response]) extends Command
 
-  final case class GetRing(replyTo: ActorRef[LazyList[RingNode]]) extends Command
+  final case class GetRing(replyTo: ActorRef[Ring]) extends Command
 
-  final case class GetTopN(hash: BigInt, n: Int, replyTo: ActorRef[Option[LazyList[RingNode]]]) extends Command
+  final case class GetTopN(hash: BigInt, n: Int, replyTo: ActorRef[Option[Ring]]) extends Command
 
   implicit val order: Ordering[RingNode] = Ordering.by(node => node.position)
 
@@ -33,7 +34,7 @@ object DistributedHashTable {
    * @param size The size of the ring
    * @return self
    */
-  def apply(ring: LazyList[RingNode] = LazyList.empty, size: Int = 0): Behavior[Command] = Behaviors.receiveMessage {
+  def apply(ring: Ring = LazyList.empty, size: Int = 0): Behavior[Command] = Behaviors.receiveMessage {
     case AddNode(ringNode, replyTo) =>
       replyTo ! OK
       DistributedHashTable(createRing((ringNode +: ring.take(size)).sorted), size + 1)

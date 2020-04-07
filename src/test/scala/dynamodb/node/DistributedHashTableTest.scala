@@ -6,6 +6,7 @@ import akka.actor.testkit.typed.scaladsl.ActorTestKit
 import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.util.Timeout
 import dynamodb.node.DistributedHashTable.{AddNode, GetRing, GetTopN, OK, Response}
+import dynamodb.node.ring.{Ring, RingNode}
 import org.scalatest.BeforeAndAfter
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -39,7 +40,7 @@ class DistributedHashTableTest extends AnyFlatSpec with Matchers with BeforeAndA
 
     result(dht.ask(AddNode(node2, _: ActorRef[Response])), 1.second) should be(OK)
 
-    val dhtRing = result(dht.ask(GetRing(_: ActorRef[LazyList[RingNode]])), 1.second)
+    val dhtRing = result(dht.ask(GetRing(_: ActorRef[Ring])), 1.second)
 
     dhtRing.head should be(node1)
     dhtRing(1) should be(node2)
@@ -58,7 +59,7 @@ class DistributedHashTableTest extends AnyFlatSpec with Matchers with BeforeAndA
     result(dht.ask(AddNode(node3, _: ActorRef[Response])), 1.second)
     result(dht.ask(AddNode(node2, _: ActorRef[Response])), 1.second)
 
-    val list = result(dht.ask(GetRing(_: ActorRef[LazyList[RingNode]])), 1.second)
+    val list = result(dht.ask(GetRing(_: ActorRef[Ring])), 1.second)
 
     list should be(List(node1, node2, node3, node4))
   }
@@ -74,7 +75,7 @@ class DistributedHashTableTest extends AnyFlatSpec with Matchers with BeforeAndA
 
     val dht = testKit.spawn(DistributedHashTable(ring, 5))
 
-    val list = result(dht.ask(GetTopN(150, 3, _: ActorRef[Option[LazyList[RingNode]]])), 1.second)
+    val list = result(dht.ask(GetTopN(150, 3, _: ActorRef[Option[Ring]])), 1.second)
     list should be(Some(List(node3, node4, node5)))
   }
 
@@ -89,7 +90,7 @@ class DistributedHashTableTest extends AnyFlatSpec with Matchers with BeforeAndA
 
     val dht = testKit.spawn(DistributedHashTable(ring, 5))
 
-    val list = result(dht.ask(GetTopN(50, 4, _: ActorRef[Option[LazyList[RingNode]]])), 1.second)
+    val list = result(dht.ask(GetTopN(50, 4, _: ActorRef[Option[Ring]])), 1.second)
     list should be(Some(List(node4, node5, node1, node2)))
   }
 
@@ -104,7 +105,7 @@ class DistributedHashTableTest extends AnyFlatSpec with Matchers with BeforeAndA
 
     val dht = testKit.spawn(DistributedHashTable(ring, 5))
 
-    val list = result(dht.ask(GetTopN(250, 4, _: ActorRef[Option[LazyList[RingNode]]])), 1.second)
+    val list = result(dht.ask(GetTopN(250, 4, _: ActorRef[Option[Ring]])), 1.second)
     list should be(Some(List(node4, node5, node1, node2)))
   }
 
@@ -116,7 +117,7 @@ class DistributedHashTableTest extends AnyFlatSpec with Matchers with BeforeAndA
 
     val dht = testKit.spawn(DistributedHashTable(ring, 5))
 
-    val list = result(dht.ask(GetTopN(250, 4, _: ActorRef[Option[LazyList[RingNode]]])), 1.second)
+    val list = result(dht.ask(GetTopN(250, 4, _: ActorRef[Option[Ring]])), 1.second)
     list should be(None)
   }
 }

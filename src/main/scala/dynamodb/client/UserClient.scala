@@ -12,6 +12,7 @@ import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
 import akka.util.Timeout
 import dynamodb.node.DistributedHashTable.{AddNode, GetTopN}
+import dynamodb.node.ring.{Ring, RingNode}
 import dynamodb.node._
 
 import scala.concurrent.duration._
@@ -66,7 +67,7 @@ object UserClient {
      * @return Http Response
      */
     def get(key: String): Future[ValueRepository.Value] = {
-      val getNodeFuture = dht.ask(GetTopN(DistributedHashTable.getHash(key), 1, _: ActorRef[Option[LazyList[RingNode]]]))
+      val getNodeFuture = dht.ask(GetTopN(DistributedHashTable.getHash(key), 1, _: ActorRef[Option[Ring]]))
       val nodeFuture = getNodeFuture.map {
         case Some(top1) => top1.head
         case None => throw new Exception("Error getting Top N list")
@@ -91,7 +92,7 @@ object UserClient {
      * @return
      */
     def put(v: ValueRepository.Value): Future[Boolean] = {
-      val getNodeFuture = dht.ask(GetTopN(DistributedHashTable.getHash(v.key), 1, _: ActorRef[Option[LazyList[RingNode]]]))
+      val getNodeFuture = dht.ask(GetTopN(DistributedHashTable.getHash(v.key), 1, _: ActorRef[Option[Ring]]))
       val nodeFuture = getNodeFuture.map {
         case Some(top1) => top1.head
         case None => throw new Exception("Error getting Top N list")

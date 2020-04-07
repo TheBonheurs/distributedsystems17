@@ -5,6 +5,7 @@ import akka.actor.typed.{ActorRef, Behavior, Scheduler}
 import akka.http.scaladsl.Http.ServerBinding
 import akka.util.Timeout
 import dynamodb.node.DistributedHashTable.{AddNode, Response}
+import dynamodb.node.ring.RingNode
 import dynamodb.node.mainObj.NodeConfig
 
 import scala.concurrent.duration._
