@@ -28,28 +28,12 @@ class ExternalRoutes(buildValueRepository: ActorRef[ValueRepository.Command], in
               entity(as[ValueRepository.Value]) { job =>
                 val putResult = internalClient.ask(Put(job, _: ActorRef[InternalClient.Response]))
                 onSuccess(putResult) {
-                  case InternalClient.ValueRes(_) => complete(StatusCodes.OK -> "Value added")
                   case InternalClient.OK => complete("Value added")
                   case InternalClient.KO(reason) => complete(StatusCodes.InternalServerError -> reason)
                 }
               }
-            },
-            delete {
-              val operationPerformed: Future[ValueRepository.Response] =
-                buildValueRepository.ask(ValueRepository.ClearValues)
-              onSuccess(operationPerformed) {
-                case ValueRepository.OK => complete("Values cleared")
-                case ValueRepository.KO(reason) => complete(StatusCodes.InternalServerError -> reason)
-              }
             }
           )
-        },
-        (delete & path(Remaining)) { id =>
-          val operationPerformed: Future[ValueRepository.Response] = buildValueRepository.ask(ValueRepository.RemoveValue(id, _))
-          onSuccess(operationPerformed) {
-            case ValueRepository.OK => complete("Value deleted")
-            case ValueRepository.KO(reason) => complete(StatusCodes.InternalServerError -> reason)
-          }
         },
         (get & path(Remaining)) { id =>
           val getResult = internalClient.ask(Get(id, _: ActorRef[InternalClient.Response]))
