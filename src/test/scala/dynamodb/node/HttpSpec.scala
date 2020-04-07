@@ -46,7 +46,7 @@ class HttpSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with Sca
       val internalProbe = testKit.createTestProbe[InternalClient.Command]()
       val mockedInternalClient = testKit.spawn(Behaviors.monitor(internalProbe.ref, mockedBehavior))
       val routes = new ExternalRoutes(valueRepository, mockedInternalClient).theValueRoutes
-      Post("/values", Value("myKey", "myVal", new VectorClock())) ~> routes ~> check {
+      Post("/values", Value("myKey", "myVal")) ~> routes ~> check {
         responseAs[String] shouldEqual "Value added"
       }
     }
@@ -54,7 +54,7 @@ class HttpSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with Sca
     "retrieve created item" in {
       val mockedBehavior = Behaviors.receiveMessage[InternalClient.Command] {
         case InternalClient.Get("myKey", replyTo) =>
-          replyTo ! InternalClient.ValueRes(Value("myKey", "myValue", new VectorClock()))
+          replyTo ! InternalClient.ValueRes(Value("myKey", "myValue"))
           Behaviors.same
       }
       val valueRepository = testKit.spawn(ValueRepository(""))

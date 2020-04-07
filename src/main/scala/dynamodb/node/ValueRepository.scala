@@ -9,8 +9,6 @@ object ValueRepository {
 
   final case class Value(key: String, value: String, version: VectorClock = new VectorClock())
 
-  final case class Values(values: Seq[Value])
-
   // Trait defining successful and failure responses
   sealed trait Response
 

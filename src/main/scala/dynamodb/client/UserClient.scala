@@ -11,13 +11,12 @@ import akka.http.scaladsl.model.{HttpEntity, _}
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
 import akka.util.Timeout
-import dynamodb.node.DistributedHashTable.{AddNode, GetTopN, Response}
+import dynamodb.node.DistributedHashTable.{AddNode, GetTopN}
 import dynamodb.node._
-import dynamodb.node.mainObj.NodeConfig
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContextExecutor, Future}
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 
 object UserClient {
 
@@ -102,7 +101,7 @@ object UserClient {
         val httpFuture = Http().singleRequest(HttpRequest(
           method = HttpMethods.POST,
           uri = address,
-          entity = HttpEntity(`application/json`, v.toJson(JsonSupport.valueFormat).compactPrint)
+          entity = HttpEntity(`application/json`, v.toJson.compactPrint)
         ))
         httpFuture
       })

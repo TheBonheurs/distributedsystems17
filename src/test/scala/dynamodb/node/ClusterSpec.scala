@@ -48,7 +48,7 @@ class ClusterSpec extends AnyWordSpec with Matchers with BeforeAndAfter {
 
   "The cluster" should {
     "start" in {
-      post(host1, "/values",  """{"key": "myKey", "value": "myValue", "version": {}}""")
+      post(host1, "/values",  """{"key": "myKey", "value": "myValue"}""")
         .body should be("Value added")
 
       // This host should know about it

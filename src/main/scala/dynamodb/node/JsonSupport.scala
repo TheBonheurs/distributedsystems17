@@ -38,6 +38,18 @@ object JsonSupport extends SprayJsonSupport {
     override def read(json: JsValue): VectorClock = new VectorClock(json.convertTo[TreeMap[String, Long]])
   }
 
-  implicit val valueFormat: RootJsonFormat[Value] = jsonFormat3(Value)
-  implicit val valuesFormat: RootJsonFormat[Values] = jsonFormat1(Values)
+  implicit object ValueFormat extends RootJsonFormat[Value] {
+    override def write(obj: Value): JsValue = JsObject(("key", obj.key.toJson), ("value", obj.value.toJson), ("version", obj.version.toJson))
+    override def read(json: JsValue): Value = {
+      val fields = json.asJsObject.fields
+      val key = fields.getOrElse("key", throw new RuntimeException("Expected field \"key\" in Value")).convertTo[String]
+      val value = fields.getOrElse("value", throw new RuntimeException("Expected field \"value\" in Value")).convertTo[String]
+      val version = fields.getOrElse("version", null)
+
+      if (version == null)
+        Value(key, value)
+      else
+        Value(key, value, version.convertTo[VectorClock])
+    }
+  }
 }
