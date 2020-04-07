@@ -5,7 +5,7 @@ import akka.cluster.VectorClock
 import dynamodb.node.Node.Stop
 import dynamodb.node.ValueRepository.Value
 import dynamodb.node.mainObj.NodeConfig
-import dynamodb.node.{DistributedHashTable, JsonSupport, Node}
+import dynamodb.node.{ClusterConfig, DistributedHashTable, JsonSupport, Node}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -55,8 +55,9 @@ class BenchmarkSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll {
 
   override def beforeAll {
     val nodes = List(host1Config, host2Config, host3Config, host4Config, host5Config, host6Config, host7Config)
+    val clusterConfig = ClusterConfig(numReplicas = 3, numWriteMinimum = 3, numReadMinimum = 2)
 
-    cluster = nodes.map(n => ActorSystem(Node.apply(n, nodes), n.name))
+    cluster = nodes.map(n => ActorSystem(Node(n, nodes, clusterConfig), n.name))
 
     // ActorSytem needs some time to boot, nothing implemented yet to check this.
     Thread.sleep(2400)
