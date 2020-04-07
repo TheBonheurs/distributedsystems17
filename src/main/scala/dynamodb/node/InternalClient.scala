@@ -53,7 +53,7 @@ object InternalClient {
         (for {
           otherNodes <- getTopNByKey(key, numNodes)
           responses <- Future.sequence(otherNodes.map(n => getOtherNodes(key, Uri.from("http", "", n.host, n.port, "/internal/"))))
-          numFailedResponses = responses.count(response => response.isEmpty)
+          numFailedResponses = responses.count(_.isEmpty)
           versions = responses.flatten
         } yield if (numFailedResponses > numReadMinimum) {
           replyTo ! KO("Not enough reads")

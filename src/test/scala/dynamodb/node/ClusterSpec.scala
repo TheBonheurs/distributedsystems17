@@ -1,15 +1,22 @@
 package dynamodb.node
 
 import akka.actor.typed.ActorSystem
-import akka.http.scaladsl.model.StatusCodes
+import akka.cluster.VectorClock
 import dynamodb.node.Node.Stop
+import dynamodb.node.ValueRepository.Value
 import dynamodb.node.mainObj.NodeConfig
-import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
+import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import scalaj.http.Http
+import scalaj.http.{Http, HttpResponse}
+
+import scala.collection.immutable.TreeMap
 
 class ClusterSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll {
+
+  import JsonSupport._
+  import spray.json._
+
   private val node1 = "node1"
   private val node2 = "node2"
   private val node3 = "node3"
@@ -56,14 +63,11 @@ class ClusterSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll {
   }
 
   private def get(host: String, path: String) =
-    Http(s"$host$path").asString
+    Http(s"$host/values/$path").asString
 
-  private def delete(host: String, path: String) =
-    Http(s"$host$path").method("DELETE").asString
-
-  private def post(host: String, path: String, json: String) =
-    Http(s"$host$path")
-      .postData(json)
+  private def post[T](host: String, json: T)(implicit writer: JsonWriter[T]): HttpResponse[String] =
+    Http(s"$host/values")
+      .postData(json.toJson.compactPrint)
       .header("content-type", "application/json")
       .asString
 
@@ -76,42 +80,42 @@ class ClusterSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll {
       val coordinator = getCoordinatorUrlForKey("myKey")
       val coordinatorUrl = hostToUrl(coordinator)
 
-      post(coordinatorUrl, "/values", """{"key": "myKey", "value": "myValue"}""")
+      post(coordinatorUrl, Value("myKey", "myValue"))
         .body should be("Value added")
 
       // This host should know about it
-      get(coordinatorUrl, "/values/myKey")
-        .body should be(s"""{"key":"myKey","value":"myValue","version":{"${coordinator}":0}}""")
+      get(coordinatorUrl, "myKey")
+        .body.parseJson.convertTo[Value] should be(Value("myKey", "myValue", new VectorClock(TreeMap(coordinator -> 0))))
 
       // It should be replicated here
-      get(host1, "/values/myKey")
-        .body should be(s"""{"key":"myKey","value":"myValue","version":{"${coordinator}":0}}""")
+      get(host1, "myKey")
+        .body.parseJson.convertTo[Value] should be(Value("myKey", "myValue", new VectorClock(TreeMap(coordinator -> 0))))
     }
 
     "update a value" in {
       val coordinator = getCoordinatorUrlForKey("updateKey")
       val coordinatorUrl = hostToUrl(coordinator)
 
-      post(coordinatorUrl, "/values", """{"key": "updateKey", "value": "myValue"}""")
+      post(coordinatorUrl, Value("updateKey", "myValue"))
         .body shouldBe "Value added"
-      post(coordinatorUrl, "/values", s"""{"key": "updateKey", "value": "myOverrideValue", "version": {"${coordinator}": 0}}""")
+      post(coordinatorUrl, Value("updateKey", "myOverrideValue", new VectorClock(TreeMap(coordinator -> 0))))
         .body shouldBe "Value added"
 
-      get(coordinatorUrl, "/values/updateKey")
-        .body should be(s"""{"key":"updateKey","value":"myOverrideValue","version":{"${coordinator}":1}}""")
+      get(coordinatorUrl, "updateKey")
+        .body.parseJson.convertTo[Value] should be(Value("updateKey", "myOverrideValue", new VectorClock(TreeMap(coordinator -> 1))))
     }
 
     "reject overriding a value with wrong version" in {
       val coordinator = getCoordinatorUrlForKey("rejectedKey")
       val coordinatorUrl = hostToUrl(coordinator)
 
-      post(coordinatorUrl, "/values", """{"key": "rejectedKey", "value": "myValue"}""")
-          .body shouldBe "Value added"
-      post(coordinatorUrl, "/values", s"""{"key": "rejectedKey", "value": "myUpdatedValue", "version": {"${coordinator}": 0}}""")
+      post(coordinatorUrl, Value("rejectedKey", "myValue"))
         .body shouldBe "Value added"
-      post(coordinatorUrl, "/values", s"""{"key": "rejectedKey", "value": "myOtherUpdatedValue", "version": {"${coordinator}": 1}}""")
+      post(coordinatorUrl, Value("rejectedKey", "myUpdatedValue", new VectorClock(TreeMap(coordinator -> 0))))
         .body shouldBe "Value added"
-      post(coordinatorUrl, "/values", s"""{"key": "rejectedKey", "value": "myRejectedValue", "version": {"${coordinator}": 1}}""")
+      post(coordinatorUrl, Value("rejectedKey", "myOtherUpdatedValue", new VectorClock(TreeMap(coordinator -> 1))))
+        .body shouldBe "Value added"
+      post(coordinatorUrl, Value("rejectedKey", "myRejectedValue", new VectorClock(TreeMap(coordinator -> 1))))
         .code shouldBe 400
     }
   }
