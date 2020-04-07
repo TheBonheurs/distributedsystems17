@@ -12,6 +12,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
   "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
   "com.typesafe.akka" %% "akka-cluster-typed" % akkaVersion,
+  "com.typesafe.akka" %% "akka-actor" % akkaVersion,
   "io.spray" %% "spray-json" % "1.3.5",
   "ch.qos.logback" % "logback-classic" % "1.1.3" % Runtime,
   "org.scalactic" %% "scalactic" % "3.1.1",

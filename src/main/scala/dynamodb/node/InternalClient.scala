@@ -20,8 +20,9 @@ import dynamodb.node.ValueRepository.GetValueByKey
 
 import scala.collection.immutable.TreeMap
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{Future, TimeoutException}
 import scala.concurrent.duration._
+
 
 object InternalClient {
   def apply(host: String, port: Int, numNodes: Int, numReadMinimum: Int, numWriteMinimum: Int, nodeName: String)(implicit valueRepository: ActorRef[ValueRepository.Command], dht: ActorRef[DistributedHashTable.Command]): Behavior[Command] = Behaviors.receive { (context, command) =>
@@ -86,8 +87,10 @@ object InternalClient {
   def getOtherNodes[T](key: String, address: Uri)(implicit actorSystem: actor.ActorSystem, mat: Materializer): Future[Option[ValueRepository.Value]] = {
     import JsonSupport._
 
+    val timeout = akka.pattern.after(Duration(1000, MILLISECONDS), using = actorSystem.scheduler) (Future.failed(new TimeoutException(s"timed out waiting on READ responses")))
+
     try for {
-      response <- Http().singleRequest(HttpRequest(uri = address + key))
+      response <- Future.firstCompletedOf(Seq(Http().singleRequest(HttpRequest(uri = address + key)), timeout))
       _ <- if (response.status != StatusCodes.OK) Future.failed(new Exception("Empty value")) else Future.successful()
       value <- Unmarshal(response).to[ValueRepository.Value]
     } yield Some(value) catch {
@@ -123,11 +126,16 @@ object InternalClient {
     import JsonSupport._
     import spray.json._
 
-    Http().singleRequest(HttpRequest(
-      method = HttpMethods.POST,
-      uri = address,
-      entity = HttpEntity(`application/json`, value.toJson.compactPrint)
-    ))
+    val timeout = akka.pattern.after(Duration(1000, MILLISECONDS), using = actorSystem.scheduler) (Future.failed(new TimeoutException(s"timed out waiting on WRITE responses")))
+
+    Future.firstCompletedOf( Seq(
+      Http().singleRequest(HttpRequest(
+        method = HttpMethods.POST,
+        uri = address,
+        entity = HttpEntity(`application/json`, value.toJson.compactPrint)
+      )),
+      timeout)
+    )
   }
 
   // Trait defining responses
@@ -145,4 +153,8 @@ object InternalClient {
 
   case object OK extends Response
 
+
+  def sleep(): Unit = {
+    Thread.sleep(5000)
+  }
 }
