@@ -17,9 +17,10 @@ object mainObj {
     // name, node (external), port (external), host (internal), port (internal)
     // max range of MD5 is 2^128=340282366920938463463374607431768211456
 
+    val clusterConfig = ClusterConfig(numReplicas = 3, numWriteMinimum = 2, numReadMinimum = 2)
 
     for (node <- nodes) {
-      ActorSystem(Node(node, nodes), node.name)
+      ActorSystem(Node(node, nodes, clusterConfig), node.name)
     }
   }
 }
