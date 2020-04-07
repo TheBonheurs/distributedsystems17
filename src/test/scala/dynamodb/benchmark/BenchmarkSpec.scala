@@ -56,7 +56,7 @@ class BenchmarkSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll {
   override def beforeAll {
     val nodes = List(host1Config, host2Config, host3Config, host4Config, host5Config, host6Config, host7Config)
 
-    cluster = nodes.map(n => ActorSystem(Node(n, nodes), n.name))
+    cluster = nodes.map(n => ActorSystem(Node.apply(n, nodes), n.name))
 
     // ActorSytem needs some time to boot, nothing implemented yet to check this.
     Thread.sleep(2400)
