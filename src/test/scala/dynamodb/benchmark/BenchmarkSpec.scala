@@ -10,10 +10,11 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import scalaj.http.{Http, HttpResponse}
-
+import org.scalatest.flatspec.AsyncFlatSpec
 import scala.collection.immutable.TreeMap
+import scala.concurrent.{Await, Future}
 
-class BenchmarkSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll {
+class BenchmarkSpec extends AsyncFlatSpec with Matchers with BeforeAndAfterAll {
   import JsonSupport._
   import spray.json._
 
@@ -89,7 +90,7 @@ class BenchmarkSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll {
 
 
   // Get benchmark, sends a single get request, returns request latency in ms
-  private def getBench(key: String): Double = {
+  private def getBench(key: String): Future[Double] = Future {
     val coordinator = getCoordinatorUrlForKey(key)
     val coordinatorUrl = hostToUrl(coordinator)
     val start = System.nanoTime()
@@ -128,37 +129,40 @@ class BenchmarkSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll {
     } / xs.size)
   }
 
-
-  "The cluster" should {
-    /**
-     * The cluster is kept online during all the tests, so make sure that you use unique keys for each test.
-     */
-    "survive get benchmark" in {
-      val coordinator = getCoordinatorUrlForKey("myKey")
-      val coordinatorUrl = hostToUrl(coordinator)
-      post(coordinatorUrl, Value("myKey", "myValue"))
-        .body should be("Value added")
-      val res = for (_ <- 0 until 10000) yield getBench("myKey")
+  it should "survive get benchmark" in {
+    val coordinator = getCoordinatorUrlForKey("myKey")
+    val coordinatorUrl = hostToUrl(coordinator)
+    post(coordinatorUrl, Value("myKey", "myValue"))
+      .body should be("Value added")
+    val start = System.nanoTime()
+    val resFutures = for (_ <- 0 until 10000) yield getBench("myKey")
+    val end = System.nanoTime()
+    val future = Future.sequence(resFutures)
+    future.map(res => {
       val latencies = res.toList
       val avg = mean(latencies)
       val std = stddev(latencies, avg)
       println("Get Mean: %.4f ms".format(avg))
       println("Get Std dev: %.4f ms".format(std))
       println("[%s]".format(latencies.mkString(",")))
-    }
+      assert(latencies.length == 10000)
+    })
+  }
 
-    "survive put benchmark" in  {
-      val coordinator = getCoordinatorUrlForKey("putKey")
-      val coordinatorUrl = hostToUrl(coordinator)
-      post(coordinatorUrl, Value("putKey", "myValue0"))
-        .body should be("Value added")
-      val res = for (i <- 0 until 10000) yield putBench("putKey", i)
-      val latencies = res.toList
-      val avg = mean(latencies)
-      val std = stddev(latencies, avg)
-      println("Put Mean: %.4f ms".format(avg))
-      println("Put Std dev: %.4f ms".format(std))
-      println("[%s]".format(latencies.mkString(", ")))
-    }
+  it should "survive put benchmark" in {
+    val coordinator = getCoordinatorUrlForKey("putKey")
+    val coordinatorUrl = hostToUrl(coordinator)
+    post(coordinatorUrl, Value("putKey", "myValue0"))
+      .body should be("Value added")
+    val start = System.nanoTime()
+    val res = for (i <- 0 until 10000) yield putBench("putKey", i)
+    val end = System.nanoTime()
+    val latencies = res.toList
+    val avg = mean(latencies)
+    val std = stddev(latencies, avg)
+    println("Put Mean: %.4f ms".format(avg))
+    println("Put Std dev: %.4f ms".format(std))
+    println("[%s]".format(latencies.mkString(", ")))
+    assert(latencies.length == 10000)
   }
 }
