@@ -1,15 +1,15 @@
-package dynamodb.node
+package dynamodb.benchmark
 
 import akka.actor.typed.ActorSystem
 import akka.cluster.VectorClock
 import dynamodb.node.Node.Stop
 import dynamodb.node.ValueRepository.Value
 import dynamodb.node.mainObj.NodeConfig
+import dynamodb.node.{DistributedHashTable, JsonSupport, Node}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import scalaj.http.{Http, HttpResponse}
-import spray.json.JsonWriter
 
 import scala.collection.immutable.TreeMap
 
@@ -59,7 +59,7 @@ class BenchmarkSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll {
     cluster = nodes.map(n => ActorSystem(Node(n, nodes), n.name))
 
     // ActorSytem needs some time to boot, nothing implemented yet to check this.
-    Thread.sleep(1000)
+    Thread.sleep(2400)
   }
 
   override def afterAll {
@@ -87,7 +87,8 @@ class BenchmarkSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll {
       .asString
 
 
-  private def getBench(key: String): Long = {
+  // Get benchmark, sends a single get request, returns request latency in ms
+  private def getBench(key: String): Double = {
     val coordinator = getCoordinatorUrlForKey(key)
     val coordinatorUrl = hostToUrl(coordinator)
     val start = System.nanoTime()
@@ -95,10 +96,11 @@ class BenchmarkSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll {
       .body.parseJson.convertTo[Value] should be(Value(key, "myValue", new VectorClock(TreeMap(coordinator -> 0))))
     val end = System.nanoTime()
     val time = end - start
-    time
+    time/1000000.0
   }
 
-  def putBench(key: String, version: Long): Long = {
+  // Put benchmark, sends a get and put request, returns the put request latency in ms
+  def putBench(key: String, version: Long): Double = {
     val coordinator = getCoordinatorUrlForKey(key)
     val coordinatorUrl = hostToUrl(coordinator)
     val value = get(coordinatorUrl, key)
@@ -109,16 +111,16 @@ class BenchmarkSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll {
       .body should be("Value added")
     val end = System.nanoTime()
     val time = end - start
-    time
+    time/1000000.0
   }
 
   // See https://gist.github.com/softprops/3936429 for mean and std dev code
-  def mean(xs: List[Long]): Double = xs match {
+  def mean(xs: List[Double]): Double = xs match {
     case Nil => 0.0
     case ys => ys.sum / ys.size.toDouble
   }
 
-  def stddev(xs: List[Long], avg: Double): Double = xs match {
+  def stddev(xs: List[Double], avg: Double): Double = xs match {
     case Nil => 0.0
     case ys => math.sqrt((0.0 /: ys) {
       (a,e) => a + math.pow(e - avg, 2.0)
@@ -139,9 +141,9 @@ class BenchmarkSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll {
       val latencies = res.toList
       val avg = mean(latencies)
       val std = stddev(latencies, avg)
-      println("Get Mean: %.4f ms".format(avg/1000000))
-      println("Get Std dev: %.4f ms".format(std/1000000))
-      println(latencies)
+      println("Get Mean: %.4f ms".format(avg))
+      println("Get Std dev: %.4f ms".format(std))
+      println("[%s]".format(latencies.mkString(",")))
     }
 
     "survive put benchmark" in  {
@@ -150,12 +152,12 @@ class BenchmarkSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll {
       post(coordinatorUrl, Value("putKey", "myValue0"))
         .body should be("Value added")
       val res = for (i <- 0 until 10000) yield putBench("putKey", i)
-      val latencies: List[Long] = res.toList
+      val latencies = res.toList
       val avg = mean(latencies)
       val std = stddev(latencies, avg)
-      println("Put Mean: %.4f ms".format(avg/1000000))
-      println("Put Std dev: %.4f ms".format(std/1000000))
-      println(latencies)
+      println("Put Mean: %.4f ms".format(avg))
+      println("Put Std dev: %.4f ms".format(std))
+      println("[%s]".format(latencies.mkString(", ")))
     }
   }
 }
