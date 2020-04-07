@@ -66,46 +66,5 @@ class HttpSpec extends AnyWordSpec with BeforeAndAfterAll with Matchers with Sca
         status shouldEqual StatusCodes.OK
       }
     }
-
-    "delete an item" in {
-      val mockedBehavior = Behaviors.receiveMessage[ValueRepository.Command] {
-        case ValueRepository.RemoveValue("myKey", replyTo) =>
-          replyTo ! OK
-          Behaviors.same
-      }
-      val probe = testKit.createTestProbe[ValueRepository.Command]()
-      val mockedPublisher = testKit.spawn(Behaviors.monitor(probe.ref, mockedBehavior))
-      implicit val dht: ActorRef[DistributedHashTable.Command] = testKit.spawn(DistributedHashTable())
-
-      val internalClient = testKit.spawn(InternalClient("", 0, 4, 2, 1, ""))
-      val routes = new ExternalRoutes(mockedPublisher, internalClient).theValueRoutes
-
-      Delete("/values/myKey") ~> routes ~> check {
-        status shouldEqual StatusCodes.OK
-
-        probe.expectMessageType[ValueRepository.RemoveValue]
-      }
-    }
-
-    "return an error when deleting a non-existent item" in {
-      val mockedBehavior = Behaviors.receiveMessage[ValueRepository.Command] {
-        case ValueRepository.RemoveValue("myKey", replyTo) =>
-          replyTo ! KO("Not found")
-          Behaviors.same
-      }
-      val probe = testKit.createTestProbe[ValueRepository.Command]()
-      val mockedPublisher = testKit.spawn(Behaviors.monitor(probe.ref, mockedBehavior))
-      implicit val dht: ActorRef[DistributedHashTable.Command] = testKit.spawn(DistributedHashTable())
-
-      val internalClient = testKit.spawn(InternalClient("", 0, 4, 2, 1, ""))
-
-      val routes = new ExternalRoutes(mockedPublisher, internalClient).theValueRoutes
-
-      Delete("/values/myKey") ~> routes ~> check {
-        status shouldEqual StatusCodes.InternalServerError
-
-        probe.expectMessageType[ValueRepository.RemoveValue]
-      }
-    }
   }
 }
