@@ -47,8 +47,8 @@ class BenchmarkSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll {
     node3 -> host3,
     node4 -> host4,
     node5 -> host5,
-    node5 -> host5,
-    node5 -> host5,
+    node6 -> host6,
+    node7 -> host7,
   )
 
   var cluster: List[ActorSystem[Node.Message]] = List()
