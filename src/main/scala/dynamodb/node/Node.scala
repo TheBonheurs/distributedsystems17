@@ -26,7 +26,7 @@ object Node {
 
   case object Stop extends Message
 
-  def apply(config: NodeConfig, allNodes: List[NodeConfig]): Behavior[Message] = Behaviors.setup { ctx =>
+  def apply(config: NodeConfig, allNodes: List[NodeConfig], clusterConfig: ClusterConfig): Behavior[Message] = Behaviors.setup { ctx =>
 
     implicit val scheduler: Scheduler = ctx.system.scheduler
     implicit val timeout: Timeout = Timeout(3.seconds)
@@ -40,10 +40,7 @@ object Node {
 
     implicit val buildValueRepository: ActorRef[ValueRepository.Command] = ctx.spawn(ValueRepository(config.name), "ValueRepository")
 
-    val N:Int = 3
-    val R:Int = N - 1
-    val W:Int = N
-    val internalClient = ctx.spawn(InternalClient(config.internalHost, config.internalPort, N, R, W, config.name), "InternalClient")
+    val internalClient = ctx.spawn(InternalClient(config.internalHost, config.internalPort, clusterConfig.numReplicas, clusterConfig.numReadMinimum, clusterConfig.numWriteMinimum, config.name), "InternalClient")
 
     val internalServer = ctx.spawn(InternalServer(buildValueRepository, config.internalHost, config.internalPort), "InternalServer")
     val externalServer = ctx.spawn(ExternalServer(buildValueRepository, internalClient, config.externalHost, config.externalPort), "ExternalServer")

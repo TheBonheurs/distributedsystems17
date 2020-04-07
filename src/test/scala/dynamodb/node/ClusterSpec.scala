@@ -43,8 +43,9 @@ class ClusterSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll {
 
   override def beforeAll {
     val nodes = List(host1Config, host2Config, host3Config, host4Config)
+    val clusterConfig = ClusterConfig(numReplicas = 3, numWriteMinimum = 3, numReadMinimum = 2)
 
-    cluster = nodes.map(n => ActorSystem(Node(n, nodes), n.name))
+    cluster = nodes.map(n => ActorSystem(Node(n, nodes, clusterConfig), n.name))
 
     // ActorSytem needs some time to boot, nothing implemented yet to check this.
     Thread.sleep(2400)
