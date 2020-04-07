@@ -126,10 +126,10 @@ class ClusterSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll {
       get(coordinatorUrl, "/values/timeKey")
         .body should be(s"""{"key":"timeKey","value":"1","version":{"${coordinator}":0}}""")
 
-      cluster.head ! Node.Sleep(10000)
+      cluster(3) ! Node.Sleep(10000)
       // This should fail
       get(coordinatorUrl, "/values/timeKey")
-        .code shouldBe 200 // dit moet falen 
+        .code shouldBe 200 // dit moet falen
     }
   }
 }
