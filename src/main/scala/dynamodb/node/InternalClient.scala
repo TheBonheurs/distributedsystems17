@@ -85,8 +85,7 @@ object InternalClient {
    */
   def getOtherNodes[T](key: String, address: Uri, nodeName: String)(implicit actorSystem: actor.ActorSystem, mat: Materializer): Future[Option[ValueRepository.Value]] = {
     import JsonSupport._
-    actorSystem.log.info("Send internal get request to {}: id = {}",
-      nodeName, key)
+//    actorSystem.log.debug("Send internal get request to {}: id = {}", nodeName, key)
     try for {
       response <- Http().singleRequest(HttpRequest(uri = address + key))
       _ <- if (response.status != StatusCodes.OK) Future.failed(new Exception("Empty value")) else Future.successful()
@@ -123,8 +122,7 @@ object InternalClient {
   def putOtherNodes(value: ValueRepository.Value, address: Uri, nodeName: String)(implicit actorSystem: actor.ActorSystem): Future[HttpResponse] = {
     import JsonSupport._
     import spray.json._
-    actorSystem.log.info("Send put request to {}: Value = {}",
-      nodeName, value.toString)
+//    actorSystem.log.debug("Send put request to {}: Value = {}", nodeName, value.toString)
     Http().singleRequest(HttpRequest(
       method = HttpMethods.POST,
       uri = address,
