@@ -14,16 +14,16 @@ import scala.concurrent.ExecutionContextExecutor
 object UserMain {
   def main(args: Array[String]): Unit = {
     val system: ActorSystem[UserClient.Command] =
-      ActorSystem(UserClient(mainObj.nodes), "hello")
+      ActorSystem(UserClient(dynamodb.cluster.cluster7.nodes), "hello")
     implicit val materializer: Materializer = Materializer(system)
     implicit val executionContext: ExecutionContextExecutor = system.executionContext
     implicit val timeout: Timeout = 5.seconds
     implicit val scheduler: Scheduler = system.scheduler
 
-    val putResult = system.ask(Put(ValueRepository.Value("test_key", "test_value", new VectorClock()), _: ActorRef[UserClient.Response]))
+    val putResult = system.ask(Put(ValueRepository.Value("test_key22", "test_value", new VectorClock()), _: ActorRef[UserClient.Response]))
     putResult.map(f => {
       println(f)
-      val getResult = system.ask(Get("test_key", _: ActorRef[UserClient.Response]))
+      val getResult = system.ask(Get("test_key22", _: ActorRef[UserClient.Response]))
       getResult.map(f => {
         println(f)
       })
