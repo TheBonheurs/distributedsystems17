@@ -25,13 +25,14 @@ class BenchmarkSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll {
   private val node6 = "node6"
   private val node7 = "node7"
 
-  private val host1Config = NodeConfig(BigInt("25"), node1, "localhost", 8001, "localhost", 9001)
-  private val host2Config = NodeConfig(BigInt("50"), node2, "localhost", 8002, "localhost", 9002)
-  private val host3Config = NodeConfig(BigInt("60"), node3, "localhost", 8003, "localhost", 9003)
-  private val host4Config = NodeConfig(BigInt("70"), node4, "localhost", 8004, "localhost", 9004)
-  private val host5Config = NodeConfig(BigInt("80"), node5, "localhost", 8005, "localhost", 9005)
-  private val host6Config = NodeConfig(BigInt("90"), node6, "localhost", 8006, "localhost", 9006)
-  private val host7Config = NodeConfig(BigInt("100"), node7, "localhost", 8007, "localhost", 9007)
+  private val local = true
+  private val host1Config = if (local) NodeConfig(BigInt("0"), node1, "localhost", 8001, "localhost", 9001) else NodeConfig(BigInt("14"), node1, "192.168.1.21", 8001, "192.168.1.21", 9001)
+  private val host2Config = if (local) NodeConfig(BigInt("14"), node2, "localhost", 8002, "localhost", 9002) else NodeConfig(BigInt("28"), node2, "192.168.1.22", 8002, "192.168.1.22", 9002)
+  private val host3Config = if (local) NodeConfig(BigInt("28"), node3, "localhost", 8003, "localhost", 9003) else NodeConfig(BigInt("42"), node3, "192.168.1.23", 8003, "192.168.1.23", 9003)
+  private val host4Config = if (local) NodeConfig(BigInt("42"), node4, "localhost", 8004, "localhost", 9004) else NodeConfig(BigInt("56"), node4, "192.168.1.24", 8004, "192.168.1.24", 9004)
+  private val host5Config = if (local) NodeConfig(BigInt("56"), node5, "localhost", 8005, "localhost", 9005) else NodeConfig(BigInt("70"), node5, "192.168.1.25", 8005, "192.168.1.25", 9005)
+  private val host6Config = if (local) NodeConfig(BigInt("70"), node6, "localhost", 8006, "localhost", 9006) else NodeConfig(BigInt("84"), node6, "192.168.1.26", 8006, "192.168.1.26", 9006)
+  private val host7Config = if (local) NodeConfig(BigInt("84"), node7, "localhost", 8007, "localhost", 9007) else NodeConfig(BigInt("84"), node7, "192.168.1.27", 8007, "192.168.1.27", 9007)
 
   private val host1 = s"http://${host1Config.externalHost}:${host1Config.externalPort}"
   private val host2 = s"http://${host2Config.externalHost}:${host2Config.externalPort}"
