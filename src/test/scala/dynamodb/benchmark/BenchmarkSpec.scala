@@ -55,17 +55,19 @@ class BenchmarkSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll {
   var cluster: List[ActorSystem[Node.Message]] = List()
 
   override def beforeAll {
-    val nodes = List(host1Config, host2Config, host3Config, host4Config, host5Config, host6Config, host7Config)
-    val clusterConfig = ClusterConfig(numReplicas = 3, numWriteMinimum = 3, numReadMinimum = 2)
+    if (local) {
+      val nodes = List(host1Config, host2Config, host3Config, host4Config, host5Config, host6Config, host7Config)
+      val clusterConfig = ClusterConfig(numReplicas = 3, numWriteMinimum = 3, numReadMinimum = 2)
 
-    cluster = nodes.map(n => ActorSystem(Node(n, nodes, clusterConfig), n.name))
+      cluster = nodes.map(n => ActorSystem(Node(n, nodes, clusterConfig), n.name))
 
-    // ActorSytem needs some time to boot, nothing implemented yet to check this.
-    Thread.sleep(2400)
+      // ActorSytem needs some time to boot, nothing implemented yet to check this.
+      Thread.sleep(2400)
+    }
   }
 
   override def afterAll {
-    cluster.foreach(n => n ! Stop)
+    if (local) cluster.foreach(n => n ! Stop)
   }
 
   private def getCoordinatorUrlForKey(key: String): String = {
