@@ -15,5 +15,5 @@ package object cluster7 {
     if (local) NodeConfig(BigInt("100"), "node7", "localhost", 8007, "localhost", 9007) else NodeConfig(BigInt("100"), "node7", "192.168.1.27", 8007, "192.168.1.27", 9007)
   )
 
-  val clusterConfig = ClusterConfig(numReplicas = 1, numWriteMinimum = 1, numReadMinimum = 1)
+  val clusterConfig = ClusterConfig(numReplicas = 3, numWriteMinimum = 3, numReadMinimum = 3)
 }
