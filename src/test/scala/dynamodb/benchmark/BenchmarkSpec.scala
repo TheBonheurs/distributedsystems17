@@ -25,7 +25,7 @@ class BenchmarkSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll {
   private val node6 = "node6"
   private val node7 = "node7"
 
-  private val local = true
+  private val local = false
   private val host1Config = if (local) NodeConfig(BigInt("0"), node1, "localhost", 8001, "localhost", 9001) else NodeConfig(BigInt("14"), node1, "192.168.1.21", 8001, "192.168.1.21", 9001)
   private val host2Config = if (local) NodeConfig(BigInt("14"), node2, "localhost", 8002, "localhost", 9002) else NodeConfig(BigInt("28"), node2, "192.168.1.22", 8002, "192.168.1.22", 9002)
   private val host3Config = if (local) NodeConfig(BigInt("28"), node3, "localhost", 8003, "localhost", 9003) else NodeConfig(BigInt("42"), node3, "192.168.1.23", 8003, "192.168.1.23", 9003)

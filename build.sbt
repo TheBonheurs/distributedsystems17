@@ -4,6 +4,8 @@ version := "0.1"
 
 scalaVersion := "2.13.1"
 
+mainClass in (Compile, packageBin) := Some("dynamodb.cluster.cluster3.node1")
+
 val akkaVersion = "2.6.4"
 val akkaHttpVersion = "10.1.11"
 
