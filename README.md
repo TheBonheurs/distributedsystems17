@@ -47,6 +47,12 @@ If you want to make a custom cluster create a new package `cluster{x}` and copy 
 ### Client
 We also implemented a simple client that can send queries to the cluster. This is located in the `dynamodb.client` package.
 
+To run this client use:
+
+```sbt "runMain dynamodb.client.UserMain"```
+
+Make sure to change `val nodes` to the appropriate cluster configuration. 
+This is either `mainObj.nodes`, `cluster7.nodes`, `cluster3.nodes` or any other custom node configuration you defined. 
 
 ## Tests
 Note that some end to end tests will fail while a cluster is already running, so make sure that when running tests locally all clusters are terminated.

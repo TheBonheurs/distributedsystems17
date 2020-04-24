@@ -15,9 +15,10 @@ import scala.concurrent.ExecutionContextExecutor
 object UserMain {
   def main(args: Array[String]): Unit = {
     // Comment out the desired cluster and comment the other ones
-    val system: ActorSystem[UserClient.Command] = ActorSystem(UserClient(mainObj.nodes), "hello")
-    //val system: ActorSystem[UserClient.Command] = ActorSystem(UserClient(cluster7.nodes), "hello")
-    //val system: ActorSystem[UserClient.Command] = ActorSystem(UserClient(cluster3.nodes), "hello")
+    val nodes = mainObj.nodes
+    //val nodes = cluster7.nodes
+    //val nodes = cluster3.nodes
+    val system: ActorSystem[UserClient.Command] = ActorSystem(UserClient(nodes), "hello")
     implicit val materializer: Materializer = Materializer(system)
     implicit val executionContext: ExecutionContextExecutor = system.executionContext
     implicit val timeout: Timeout = 5.seconds
