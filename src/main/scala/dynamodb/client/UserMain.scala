@@ -7,14 +7,18 @@ import akka.stream.Materializer
 import akka.util.Timeout
 import dynamodb.client.UserClient.{Get, Put}
 import dynamodb.node.{ValueRepository, mainObj}
+import dynamodb.cluster.{cluster7, cluster3}
 
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContextExecutor
 
 object UserMain {
   def main(args: Array[String]): Unit = {
-    val system: ActorSystem[UserClient.Command] =
-      ActorSystem(UserClient(mainObj.nodes), "hello")
+    // Comment out the desired cluster and comment the other ones
+    val nodes = mainObj.nodes
+    //val nodes = cluster7.nodes
+    //val nodes = cluster3.nodes
+    val system: ActorSystem[UserClient.Command] = ActorSystem(UserClient(nodes), "hello")
     implicit val materializer: Materializer = Materializer(system)
     implicit val executionContext: ExecutionContextExecutor = system.executionContext
     implicit val timeout: Timeout = 5.seconds
