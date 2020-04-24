@@ -58,7 +58,7 @@ class BenchmarkSpec extends AsyncFlatSpec with Matchers with BeforeAndAfterAll {
   override def beforeAll {
     if (local) {
       val nodes = List(host1Config, host2Config, host3Config, host4Config, host5Config, host6Config, host7Config)
-      val clusterConfig = ClusterConfig(numReplicas = 3, numWriteMinimum = 3, numReadMinimum = 2)
+      val clusterConfig = ClusterConfig(numReplicas = 6, numWriteMinimum = 6, numReadMinimum = 6)
 
       cluster = nodes.map(n => ActorSystem(Node(n, nodes, clusterConfig), n.name))
 

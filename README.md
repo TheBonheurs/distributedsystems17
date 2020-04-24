@@ -42,6 +42,11 @@ To run the 7 node cluster run:
 ```sbt "runMain dynamodb.cluster.cluster7.node7```
 on the different nodes, make sure the IP addresses of these nodes are updated in the `dynamodb.cluster.cluster7.package` file.
 
+In the same file you can change the cluster config at `val clusterConfig` to have different parameters for **N**, **W**, and **R**. 
+**N** is the replication factor, which determined on how many nodes in the ring the data is replicated. 
+**W** determines the minmimum amount of confirmed writes. 
+**R** determines the minimum amount of confirmed reads.
+
 If you want to make a custom cluster create a new package `cluster{x}` and copy the files from either `cluster3` or `cluster7` and change the values.
 
 ### Client
@@ -62,3 +67,17 @@ To run the test suite run:
 ```sbt "testOnly dynamodb.node.*"```
 
 The reason to use this command instead of `sbt test` is that we also have a very long benchmark spec defined in the test folder which can take around 10 minutes.
+
+## Experiments
+As mentioned above we also have a benchmark which serves as the experiment of the system evaluation.
+This benchmark is located in the `test` directory under the `dynamodb.benchmark` package as the `BenchmarkSpec` file.
+
+In itself this test can simply be run locally **without** starting up any cluster manually using:
+
+```sbt "testOnly dynamodb.benchmark.*"```
+
+This uses a local 7 node cluster.
+
+If you want to run this benchmark with a non local cluster make sure that you set `val local` to `false` at line  29 in `BenchmarkSpec`.
+The other thing you need to do is configure the nodes in the `val host{x}Config` values. Change the IP adress and ports of the `NodeConfig` to the correct ones. 
+The values that are filled in already are for the `cluster7` configuration.
