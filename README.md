@@ -40,6 +40,7 @@ To run the 7 node cluster run:
 ...
 
 ```sbt "runMain dynamodb.cluster.cluster7.node7```
+
 on the different nodes, make sure the IP addresses of these nodes are updated in the `dynamodb.cluster.cluster7.package` file.
 
 In the same file you can change the cluster config at `val clusterConfig` to have different parameters for **N**, **W**, and **R**. 
