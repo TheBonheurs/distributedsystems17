@@ -48,7 +48,7 @@ class InternalServer(context: ActorContext[InternalServer.Command], valueReposit
       case Started(binding) =>
         started = true
         this.binding = binding
-        context.log.info(
+        context.log.debug(
           "Internal server online at http://{}:{}/",
           binding.localAddress.getHostString,
           binding.localAddress.getPort)
@@ -57,7 +57,7 @@ class InternalServer(context: ActorContext[InternalServer.Command], valueReposit
 
       case Stop() =>
         if (started) this.binding.unbind()
-        context.log.info(
+        context.log.debug(
           "Stopping server http://{}:{}/",
           binding.localAddress.getHostString,
           binding.localAddress.getPort)

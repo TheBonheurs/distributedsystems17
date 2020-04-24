@@ -24,9 +24,7 @@ class InternalRoutes(buildValueRepository: ActorRef[ValueRepository.Command], no
         pathEnd {
             post {
               entity(as[ValueRepository.Value]) { job =>
-                system.log.info(
-                  "Received put request at internal server {}: value = {}",
-                  nodeName, job.toString)
+//                system.log.debug("Received put request at internal server {}: value = {}", nodeName, job.toString)
                 val operationPerformed: Future[ValueRepository.Response] =
                   buildValueRepository.ask(ValueRepository.AddValue(job, _))
                 onSuccess(operationPerformed) {
@@ -37,9 +35,7 @@ class InternalRoutes(buildValueRepository: ActorRef[ValueRepository.Command], no
             }
         },
         (get & path(Remaining)) { id =>
-          system.log.info(
-            "Received get request at internal server {}: id = {}",
-            nodeName, id)
+//          system.log.debug("Received get request at internal server {}: id = {}", nodeName, id)
           val maybeValue: Future[Option[ValueRepository.Value]] =
             buildValueRepository.ask(ValueRepository.GetValueByKey(id, _))
           rejectEmptyResponse {
