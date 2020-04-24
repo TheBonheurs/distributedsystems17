@@ -149,7 +149,7 @@ class BenchmarkSpec extends AsyncFlatSpec with Matchers with BeforeAndAfterAll {
       println("Get throughput: %.2f rq/s".format(getRequestNum/((end-start)/1000000000.0)))
       println("Get Mean: %.4f ms".format(avg))
       println("Get Std dev: %.4f ms".format(std))
-      println("[%s]".format(latencies.mkString(",")))
+      println("[%s]".format(latencies.mkString(", ")))
       assert(latencies.length == 10000)
     })
   }
